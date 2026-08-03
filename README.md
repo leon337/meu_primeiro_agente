@@ -2,6 +2,18 @@
 
 Assistente em Python conectado ao Gemini, disponível no terminal, como API web, PWA instalável e por webhook da WhatsApp Cloud API. O modelo roda na nuvem; as ferramentas locais continuam limitadas a uma lista fechada.
 
+**Produção:** https://meu-primeiro-agente-indol.vercel.app
+
+## Documentação
+
+- [Estado atual e passagem para outra IA](docs/PROJECT_STATE.md)
+- [Arquitetura e fluxo completo](docs/ARCHITECTURE.md)
+- [Instalação e implantação](docs/SETUP_AND_DEPLOYMENT.md)
+- [Operação e solução de problemas](docs/OPERATIONS.md)
+- [Modelo de segurança](docs/SECURITY.md)
+- [Histórico de construção e decisões](docs/DECISIONS.md)
+- [Instruções para agentes de IA](AGENTS.md)
+
 ## Segurança e arquitetura
 
 O `Agent` coordena a conversa sem conhecer o Gemini. `AIProvider` define o contrato substituível do provedor. `GeminiProvider` converte esse contrato para o SDK oficial. `ToolRegistry` funciona como lista fechada: nomes ou parâmetros não previstos são recusados.
@@ -99,11 +111,11 @@ vercel env add APP_ACCESS_TOKEN production
 vercel --prod
 ```
 
-Adicione as quatro variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/` e todos os arquivos `.env` são ignorados pelo Git.
+Adicione as quatro variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/`, o arquivo `.env` e `.env.local` são ignorados pelo Git.
 
 ## Consultar o computador pela nuvem
 
-A aplicação nunca abre uma porta do roteador. Uma ponte local autenticada executa somente as quatro ferramentas da lista fechada, e um Cloudflare Tunnel encaminha HTTPS até ela.
+A aplicação nunca abre uma porta do roteador. Uma ponte local autenticada executa somente as quatro ferramentas da lista fechada, e o Tailscale Funnel encaminha HTTPS até ela por um hostname fixo.
 
 No `.env` do computador, configure uma pasta e um token aleatório longo:
 
@@ -118,17 +130,29 @@ Inicie a ponte:
 python3 -m app.bridge
 ```
 
-Em outro terminal, inicie o Cloudflare Tunnel apontando para a ponte:
+Depois de autenticar o Tailscale local, publique a ponte pelo Funnel:
 
 ```bash
-cloudflared tunnel --url http://127.0.0.1:8787
+.tools/tailscale/tailscale --socket="$PWD/.runtime/tailscaled.sock" funnel --bg --yes 8787
 ```
 
 Cadastre na Vercel e faça redeploy:
 
 ```env
-BRIDGE_URL=https://endereco-fornecido-pelo-tunnel
+BRIDGE_URL=https://nome-do-computador.sua-rede.ts.net
 BRIDGE_DEVICE_TOKEN=o_mesmo_token_do_computador
 ```
 
-Para uso permanente, prefira um tunnel nomeado pelo painel Cloudflare Zero Trust, com hostname fixo e token gerenciado. Quando `BRIDGE_URL` não está configurada, a versão na Vercel não oferece ferramentas de sistema e nunca confunde o disco da nuvem com o computador.
+Quando `BRIDGE_URL` não está configurada, a versão na Vercel não oferece ferramentas de sistema e nunca confunde o disco da nuvem com o computador. Consulte o guia detalhado em `docs/SETUP_AND_DEPLOYMENT.md`.
+
+### Inicialização automática no Linux
+
+Os arquivos em `systemd/` iniciam a ponte e o Tailscale no login, sem depender do VS Code ou de um terminal aberto. O Tailscale Funnel fornece um hostname HTTPS fixo em `*.ts.net`; cadastre esse endereço como `BRIDGE_URL` na Vercel.
+
+```bash
+systemctl --user status hello-agent-bridge.service
+systemctl --user status hello-agent-tailscaled.service
+journalctl --user -u hello-agent-tailscaled.service -f
+```
+
+O serviço usa o modo de rede em espaço do usuário e não exige instalação administrativa. O estado de autenticação fica somente em `.tools/tailscale-state/`, que é ignorado pelo Git.

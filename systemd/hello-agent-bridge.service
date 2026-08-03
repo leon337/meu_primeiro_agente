@@ -1,0 +1,16 @@
+[Unit]
+Description=Hello Agent - ponte local autenticada
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/leo/Documentos/GitHub/meu_primeiro_agente
+ExecStart=/home/leo/Documentos/GitHub/meu_primeiro_agente/.venv/bin/python -m uvicorn app.bridge:app --host 127.0.0.1 --port 8787
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
