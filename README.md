@@ -132,3 +132,15 @@ BRIDGE_DEVICE_TOKEN=o_mesmo_token_do_computador
 ```
 
 Para uso permanente, prefira um tunnel nomeado pelo painel Cloudflare Zero Trust, com hostname fixo e token gerenciado. Quando `BRIDGE_URL` não está configurada, a versão na Vercel não oferece ferramentas de sistema e nunca confunde o disco da nuvem com o computador.
+
+### Inicialização automática no Linux
+
+Os arquivos em `systemd/` iniciam a ponte e o Tailscale no login, sem depender do VS Code ou de um terminal aberto. O Tailscale Funnel fornece um hostname HTTPS fixo em `*.ts.net`; cadastre esse endereço como `BRIDGE_URL` na Vercel.
+
+```bash
+systemctl --user status hello-agent-bridge.service
+systemctl --user status hello-agent-tailscaled.service
+journalctl --user -u hello-agent-tailscaled.service -f
+```
+
+O serviço usa o modo de rede em espaço do usuário e não exige instalação administrativa. O estado de autenticação fica somente em `.tools/tailscale-state/`, que é ignorado pelo Git.

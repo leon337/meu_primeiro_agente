@@ -1,4 +1,5 @@
 .env
+.env.local
 .venv/
 __pycache__/
 .pytest_cache/
@@ -6,3 +7,4 @@ __pycache__/
 *.log
 .vercel/
 .tools/
+.runtime/

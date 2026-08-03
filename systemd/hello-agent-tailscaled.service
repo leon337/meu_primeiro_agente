@@ -1,0 +1,16 @@
+[Unit]
+Description=Hello Agent - Tailscale sem privilégios administrativos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/leo/Documentos/GitHub/meu_primeiro_agente
+ExecStartPre=/usr/bin/mkdir -p /home/leo/Documentos/GitHub/meu_primeiro_agente/.runtime /home/leo/Documentos/GitHub/meu_primeiro_agente/.tools/tailscale-state
+ExecStart=/home/leo/Documentos/GitHub/meu_primeiro_agente/.tools/tailscale/tailscaled --tun=userspace-networking --socket=/home/leo/Documentos/GitHub/meu_primeiro_agente/.runtime/tailscaled.sock --state=/home/leo/Documentos/GitHub/meu_primeiro_agente/.tools/tailscale-state/tailscaled.state --statedir=/home/leo/Documentos/GitHub/meu_primeiro_agente/.tools/tailscale-state
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
