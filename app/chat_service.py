@@ -7,6 +7,7 @@ from typing import Callable
 
 from app.agent import Agent
 from app.providers.gemini_provider import GeminiProvider
+from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 
 
@@ -19,13 +20,14 @@ class ChatService:
         model_name: str,
         allowed_directory: Path,
         fallback_model_name: str | None = None,
+        registry: ToolExecutor | None = None,
         max_sessions: int = 100,
         agent_factory: Callable[[], Agent] | None = None,
     ) -> None:
         self._api_key = api_key
         self._model_name = model_name
         self._fallback_model_name = fallback_model_name
-        self._registry = ToolRegistry(allowed_directory)
+        self._registry = registry or ToolRegistry(allowed_directory)
         self._max_sessions = max_sessions
         self._agent_factory = agent_factory
         self._sessions: OrderedDict[str, Agent] = OrderedDict()

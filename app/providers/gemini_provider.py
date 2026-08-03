@@ -24,7 +24,7 @@ class GeminiProvider(AIProvider):
             system_instruction=("Você é um assistente didático. Responda sempre em português. "
                                 "Use somente as ferramentas declaradas e nunca invente resultados. "
                                 "Não peça nem exponha chaves, segredos ou conteúdo de arquivos."),
-            tools=[types.Tool(function_declarations=declarations)],
+            tools=[types.Tool(function_declarations=declarations)] if declarations else None,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         self._history: list[types.Content] = []
@@ -53,9 +53,17 @@ class GeminiProvider(AIProvider):
 
     def send_message(self, message: str) -> ProviderResponse:
         self._history.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
-        return self._generate()
+        try:
+            return self._generate()
+        except Exception:
+            self._history.pop()
+            raise
 
     def send_tool_results(self, results: list[tuple[str, dict[str, Any]]]) -> ProviderResponse:
         parts = [types.Part.from_function_response(name=name, response=result) for name, result in results]
-        self._history.append(types.Content(role="tool", parts=parts))
-        return self._generate()
+        self._history.append(types.Content(role="user", parts=parts))
+        try:
+            return self._generate()
+        except Exception:
+            self._history.pop()
+            raise

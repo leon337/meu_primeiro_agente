@@ -4,11 +4,11 @@ from typing import Any
 
 from app.models import ProviderResponse
 from app.providers.base import AIProvider
-from app.tools.registry import ToolRegistry
+from app.tools.base import ToolExecutor
 
 
 class Agent:
-    def __init__(self, provider: AIProvider, registry: ToolRegistry, max_tool_rounds: int = 5) -> None:
+    def __init__(self, provider: AIProvider, registry: ToolExecutor, max_tool_rounds: int = 5) -> None:
         self.provider = provider
         self.registry = registry
         self.max_tool_rounds = max_tool_rounds
@@ -31,4 +31,3 @@ class Agent:
                 results.append((call.name, result))
             response = self.provider.send_tool_results(results)
         raise RuntimeError("Limite de rodadas de ferramentas atingido")
-

@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 import json
+import logging
 import os
 from pathlib import Path
 import secrets
@@ -13,11 +14,15 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.chat_service import ChatService
+from app.tools.base import ToolExecutor
+from app.tools.registry import ToolRegistry
+from app.tools.remote import EmptyToolRegistry, RemoteToolRegistry
 from app.whatsapp import incoming_texts, send_text, valid_signature
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Hello Agent", version="2.0.0")
 
@@ -29,6 +34,16 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+def get_tool_registry(allowed: Path) -> ToolExecutor:
+    bridge_url = os.getenv("BRIDGE_URL", "").strip()
+    bridge_token = os.getenv("BRIDGE_DEVICE_TOKEN", "").strip()
+    if bridge_url and bridge_token:
+        return RemoteToolRegistry(bridge_url, bridge_token)
+    if os.getenv("VERCEL"):
+        return EmptyToolRegistry()
+    return ToolRegistry(allowed)
 
 
 @lru_cache
@@ -44,6 +59,7 @@ def get_chat_service() -> ChatService:
         os.getenv("MODEL_NAME", "gemini-3.6-flash"),
         allowed,
         os.getenv("FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite"),
+        registry=get_tool_registry(allowed),
     )
 
 
@@ -73,9 +89,19 @@ def pwa_asset(asset_name: str) -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, object]:
+    bridge_url = os.getenv("BRIDGE_URL", "").strip()
+    bridge_token = os.getenv("BRIDGE_DEVICE_TOKEN", "").strip()
+    bridge_connected = False
+    if bridge_url and bridge_token:
+        try:
+            bridge_connected = RemoteToolRegistry(bridge_url, bridge_token).health()
+        except ValueError:
+            pass
     return {
         "status": "ok",
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "bridge_configured": bool(bridge_url and bridge_token),
+        "bridge_connected": bridge_connected,
         "whatsapp_configured": all(
             os.getenv(name)
             for name in ("WHATSAPP_VERIFY_TOKEN", "WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_APP_SECRET")
@@ -91,6 +117,12 @@ def chat(payload: ChatRequest, service: Annotated[ChatService, Depends(get_chat_
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Falha ao processar conversa na sessão %s", payload.session_id)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "O serviço de IA não conseguiu responder. Tente novamente.",
+        ) from exc
     return ChatResponse(reply=reply)
 
 

@@ -33,7 +33,9 @@ async function checkHealth() {
   try {
     const response = await fetch("/api/health");
     const health = await response.json();
-    statusLabel.textContent = health.gemini_configured ? "Online" : "Configuração pendente";
+    if (!health.gemini_configured) statusLabel.textContent = "Configuração pendente";
+    else if (health.bridge_connected) statusLabel.textContent = "Online • computador conectado";
+    else statusLabel.textContent = "Online • computador desconectado";
   } catch {
     statusLabel.textContent = "Sem conexão";
   }
@@ -49,7 +51,13 @@ async function sendMessage(message) {
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ message, session_id: sessionId }),
     });
-    const payload = await response.json();
+    const raw = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = { detail: raw || `Erro HTTP ${response.status}` };
+    }
     if (!response.ok) throw new Error(payload.detail || "Não foi possível responder.");
     pending.querySelector(".bubble").textContent = payload.reply;
     pending.classList.remove("pending");

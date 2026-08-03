@@ -100,3 +100,35 @@ vercel --prod
 ```
 
 Adicione as quatro variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/` e todos os arquivos `.env` são ignorados pelo Git.
+
+## Consultar o computador pela nuvem
+
+A aplicação nunca abre uma porta do roteador. Uma ponte local autenticada executa somente as quatro ferramentas da lista fechada, e um Cloudflare Tunnel encaminha HTTPS até ela.
+
+No `.env` do computador, configure uma pasta e um token aleatório longo:
+
+```env
+ALLOWED_DIRECTORY=/caminho/absoluto/permitido
+BRIDGE_DEVICE_TOKEN=um_token_longo_e_exclusivo
+```
+
+Inicie a ponte:
+
+```bash
+python3 -m app.bridge
+```
+
+Em outro terminal, inicie o Cloudflare Tunnel apontando para a ponte:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8787
+```
+
+Cadastre na Vercel e faça redeploy:
+
+```env
+BRIDGE_URL=https://endereco-fornecido-pelo-tunnel
+BRIDGE_DEVICE_TOKEN=o_mesmo_token_do_computador
+```
+
+Para uso permanente, prefira um tunnel nomeado pelo painel Cloudflare Zero Trust, com hostname fixo e token gerenciado. Quando `BRIDGE_URL` não está configurada, a versão na Vercel não oferece ferramentas de sistema e nunca confunde o disco da nuvem com o computador.
