@@ -10,9 +10,15 @@ from app.providers.base import AIProvider, tool_definitions_to_dicts
 
 
 class GeminiProvider(AIProvider):
-    def __init__(self, api_key: str, model_name: str, tools: list[ToolDefinition]) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        model_name: str,
+        tools: list[ToolDefinition],
+        fallback_model_name: str | None = None,
+    ) -> None:
         self._client = genai.Client(api_key=api_key)
-        self._model_name = model_name
+        self._model_names = list(dict.fromkeys(filter(None, (model_name, fallback_model_name))))
         declarations = [types.FunctionDeclaration(**item) for item in tool_definitions_to_dicts(tools)]
         self._config = types.GenerateContentConfig(
             system_instruction=("Você é um assistente didático. Responda sempre em português. "
@@ -24,7 +30,19 @@ class GeminiProvider(AIProvider):
         self._history: list[types.Content] = []
 
     def _generate(self) -> ProviderResponse:
-        response = self._client.models.generate_content(model=self._model_name, contents=self._history, config=self._config)
+        response = None
+        last_error: Exception | None = None
+        for model_name in self._model_names:
+            try:
+                response = self._client.models.generate_content(model=model_name, contents=self._history, config=self._config)
+                break
+            except Exception as exc:
+                last_error = exc
+                status_code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+                if status_code not in (429, 503) and "429" not in str(exc) and "503" not in str(exc):
+                    raise
+        if response is None:
+            raise RuntimeError("Os modelos Gemini estão temporariamente indisponíveis") from last_error
         if not response.candidates or response.candidates[0].content is None:
             raise RuntimeError("O Gemini não retornou uma resposta utilizável")
         model_content = response.candidates[0].content
@@ -41,4 +59,3 @@ class GeminiProvider(AIProvider):
         parts = [types.Part.from_function_response(name=name, response=result) for name, result in results]
         self._history.append(types.Content(role="tool", parts=parts))
         return self._generate()
-
