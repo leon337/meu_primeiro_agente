@@ -12,6 +12,7 @@ Assistente em Python conectado ao Gemini, disponível no terminal, como API web,
 - [Operação e solução de problemas](docs/OPERATIONS.md)
 - [Modelo de segurança](docs/SECURITY.md)
 - [Histórico de construção e decisões](docs/DECISIONS.md)
+- [Tutorial completo: WhatsApp Cloud API](docs/WHATSAPP_DEPLOYMENT_TUTORIAL.md)
 - [Instruções para agentes de IA](AGENTS.md)
 
 ## Segurança e arquitetura
@@ -89,7 +90,7 @@ WHATSAPP_VERIFY_TOKEN=um_valor_criado_por_voce
 WHATSAPP_ACCESS_TOKEN=token_fornecido_pela_meta
 WHATSAPP_PHONE_NUMBER_ID=id_do_numero_na_meta
 WHATSAPP_APP_SECRET=segredo_do_aplicativo_meta
-WHATSAPP_GRAPH_VERSION=v23.0
+WHATSAPP_GRAPH_VERSION=v26.0
 ```
 
 No painel da Meta, configure a URL de callback como:
@@ -99,6 +100,14 @@ https://SEU-DOMINIO/api/whatsapp/webhook
 ```
 
 Use em **Verify token** exatamente o valor de `WHATSAPP_VERIFY_TOKEN` e assine o campo `messages`. A versão da Graph API é configurável para facilitar atualizações.
+
+Páginas públicas usadas na configuração e publicação do aplicativo Meta:
+
+- política de privacidade: `https://SEU-DOMINIO/privacy`;
+- termos de serviço: `https://SEU-DOMINIO/terms`;
+- exclusão de dados: `https://SEU-DOMINIO/data-deletion`.
+
+O processo completo, incluindo criação do usuário de sistema, permissões mínimas, erros encontrados e teste real, está em [`docs/WHATSAPP_DEPLOYMENT_TUTORIAL.md`](docs/WHATSAPP_DEPLOYMENT_TUTORIAL.md).
 
 ### Vercel
 
@@ -111,7 +120,7 @@ vercel env add APP_ACCESS_TOKEN production
 vercel --prod
 ```
 
-Adicione as quatro variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/`, o arquivo `.env` e `.env.local` são ignorados pelo Git.
+Adicione as cinco variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/`, o arquivo `.env` e `.env.local` são ignorados pelo Git.
 
 ## Consultar o computador pela nuvem
 

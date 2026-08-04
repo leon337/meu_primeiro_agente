@@ -71,6 +71,8 @@ Não transforme `ToolRegistry` em um executor genérico. Uma ferramenta “run_c
 
 Rotacione imediatamente um segredo exibido em captura pública, log, commit ou conversa não confiável. Depois da rotação, reinicie a ponte e faça redeploy da Vercel.
 
+O token permanente do WhatsApp deve ser criado por um usuário de sistema dedicado. Para o fluxo atual, conceda ao ativo WhatsApp somente a capacidade **Mensagens** e gere o token somente com `whatsapp_business_messaging`. Não use o token temporário de teste da tela inicial nem conceda `business_management` sem uma necessidade documentada.
+
 ## Checklist antes de tornar o repositório público
 
 ```bash
