@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Hello Agent", version="2.0.0")
+app = FastAPI(title="Hello Agent", version="2.0.1")
 
 
 class ChatRequest(BaseModel):
@@ -77,6 +77,21 @@ def require_app_token(authorization: str | None = Header(default=None)) -> None:
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
     return FileResponse(PUBLIC / "index.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+def privacy_policy() -> FileResponse:
+    return FileResponse(PUBLIC / "privacy.html")
+
+
+@app.get("/data-deletion", include_in_schema=False)
+def data_deletion() -> FileResponse:
+    return FileResponse(PUBLIC / "data-deletion.html")
+
+
+@app.get("/terms", include_in_schema=False)
+def terms_of_service() -> FileResponse:
+    return FileResponse(PUBLIC / "terms.html")
 
 
 @app.get("/{asset_name}", include_in_schema=False)
