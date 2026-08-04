@@ -27,7 +27,7 @@ jobs:
       - run: python -m pytest -q
       - name: Empacotar fonte validada
         if: matrix.python-version == '3.12'
-        run: tar --exclude=.git --exclude=hello-agent-source.tgz -czf hello-agent-source.tgz .
+        run: git archive --format=tar.gz --output=hello-agent-source.tgz HEAD
       - name: Publicar artefato de deploy
         if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
