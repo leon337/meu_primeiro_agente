@@ -1,0 +1,56 @@
+"""Roteamento seguro entre navegador e desktop."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from app.browser.adapter import BrowserStepAdapter
+from app.browser.executor import EnvironmentCredentialBroker, PlaywrightBrowserExecutor
+from app.desktop.executor import (
+    AtSpiDesktopBackend,
+    DesktopAction,
+    DesktopOperation,
+    DryRunDesktopBackend,
+    SafeDesktopExecutor,
+)
+from app.missions.models import Mission, MissionStep
+
+
+class ExecutiveActionExecutor:
+    def __call__(self, mission: Mission, step: MissionStep) -> dict[str, object]:
+        channel = str(step.parameters.get("channel", "browser"))
+        if channel == "browser":
+            return self._browser(mission, step)
+        if channel == "desktop":
+            return self._desktop(mission, step)
+        raise RuntimeError("Canal executivo não permitido")
+
+    def _browser(self, mission: Mission, step: MissionStep) -> dict[str, object]:
+        real = os.getenv("AEP_BROWSER_REAL", "0") == "1"
+        profile = os.getenv("AEP_BROWSER_PROFILE", "var/aep/browser-profile")
+        executor = PlaywrightBrowserExecutor(
+            mission.allowed_domains,
+            credential_broker=EnvironmentCredentialBroker(),
+            profile_directory=Path(profile),
+            dry_run=not real,
+            headless=os.getenv("AEP_BROWSER_HEADLESS", "0") == "1",
+        )
+        return BrowserStepAdapter(executor)(mission, step)
+
+    def _desktop(self, mission: Mission, step: MissionStep) -> dict[str, object]:
+        allowed_apps = tuple(
+            item.strip() for item in os.getenv("AEP_DESKTOP_APPS", "").split(",") if item.strip()
+        )
+        real = os.getenv("AEP_DESKTOP_REAL", "0") == "1"
+        backend = AtSpiDesktopBackend() if real else DryRunDesktopBackend()
+        executor = SafeDesktopExecutor(allowed_apps, backend)
+        operation = DesktopOperation(step.action)
+        action = DesktopAction(
+            application=str(step.parameters.get("application", "")),
+            operation=operation,
+            control_name=str(step.parameters.get("control_name", "")),
+            value=str(step.parameters.get("value", "")),
+        )
+        approval_granted = step.approval_status.value == "APPROVED" or not step.requires_approval
+        return executor.execute(action, approval_granted=approval_granted)
