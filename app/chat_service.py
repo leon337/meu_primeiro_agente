@@ -1,6 +1,7 @@
 """Sessões isoladas do agente para os canais web e WhatsApp."""
 
 from collections import OrderedDict
+from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
 from typing import Callable
@@ -11,8 +12,17 @@ from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 
 
+@dataclass
+class _SessionState:
+    """Estado e fila exclusiva de uma sessão."""
+
+    agent: Agent
+    lock: RLock = field(default_factory=RLock)
+    active_requests: int = 0
+
+
 class ChatService:
-    """Mantém um conjunto limitado de agentes em memória por sessão."""
+    """Mantém agentes isolados e serializa apenas mensagens da mesma sessão."""
 
     def __init__(
         self,
@@ -30,7 +40,7 @@ class ChatService:
         self._registry = registry or ToolRegistry(allowed_directory)
         self._max_sessions = max_sessions
         self._agent_factory = agent_factory
-        self._sessions: OrderedDict[str, Agent] = OrderedDict()
+        self._sessions: OrderedDict[str, _SessionState] = OrderedDict()
         self._lock = RLock()
 
     def _new_agent(self) -> Agent:
@@ -44,17 +54,58 @@ class ChatService:
         )
         return Agent(provider, self._registry)
 
-    def chat(self, session_id: str, message: str) -> str:
-        session_id = session_id.strip()
-        if not session_id or len(session_id) > 128:
+    @staticmethod
+    def _validate_session_id(session_id: str) -> str:
+        normalized = session_id.strip()
+        if not normalized or len(normalized) > 128:
             raise ValueError("Identificador de sessão inválido")
+        return normalized
+
+    def _evict_idle_sessions(self) -> None:
+        """Mantém o limite sem remover sessões que estão executando ou aguardando."""
+
+        if len(self._sessions) <= self._max_sessions:
+            return
+        for candidate_id, state in list(self._sessions.items()):
+            if len(self._sessions) <= self._max_sessions:
+                break
+            if state.active_requests == 0:
+                self._sessions.pop(candidate_id, None)
+
+    def chat(self, session_id: str, message: str) -> str:
+        session_id = self._validate_session_id(session_id)
         with self._lock:
-            agent = self._sessions.pop(session_id, None) or self._new_agent()
-            self._sessions[session_id] = agent
-            while len(self._sessions) > self._max_sessions:
-                self._sessions.popitem(last=False)
-            return agent.chat(message)
+            state = self._sessions.pop(session_id, None)
+            if state is None:
+                state = _SessionState(self._new_agent())
+            state.active_requests += 1
+            self._sessions[session_id] = state
+            self._evict_idle_sessions()
+
+        try:
+            # Conversas iguais permanecem ordenadas; sessões diferentes não se bloqueiam.
+            with state.lock:
+                return state.agent.chat(message)
+        finally:
+            with self._lock:
+                state.active_requests -= 1
+                if self._sessions.get(session_id) is state:
+                    self._sessions.move_to_end(session_id)
+                self._evict_idle_sessions()
 
     def reset(self, session_id: str) -> None:
+        session_id = self._validate_session_id(session_id)
         with self._lock:
-            self._sessions.pop(session_id, None)
+            state = self._sessions.get(session_id)
+            if state is None:
+                return
+            state.active_requests += 1
+
+        try:
+            with state.lock:
+                with self._lock:
+                    if self._sessions.get(session_id) is state:
+                        self._sessions.pop(session_id, None)
+        finally:
+            with self._lock:
+                state.active_requests -= 1
