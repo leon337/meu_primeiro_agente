@@ -6,7 +6,7 @@
 
 ## Evidências examinadas
 
-Contratos, persistência, eventos, operadores, integração MCF, voz, worker e testes automatizados.
+Contratos, persistência, eventos, operadores, integração MCF, voz, worker, testes locais e CI remoto em Python 3.11 e 3.12.
 
 ## Achados
 
@@ -30,11 +30,16 @@ low: 4
 3. SQLite é suficiente para uso pessoal, não para alta disponibilidade.
 4. O primeiro conjunto de sites ainda precisa de roteiros específicos e smoke individual.
 
+## Evidência de correção
+
+O CI inicial revelou uma expectativa antiga da identidade da PWA. A regressão foi corrigida e o run `30941747632` passou integralmente em Python 3.11 e 3.12.
+
 ## Veredito
 
 ```yaml
 verdict: PASS_WITH_ACTIVATION_RESERVATIONS
+ci_remote: PASS
 merge_blocked: true
-reason: CI_REMOTO_E_SMOKES_LOCAIS_PENDENTES
+reason: SMOKES_LOCAIS_E_ATIVACAO_CONTROLADA_PENDENTES
 safe_to_continue_on_branch: true
 ```

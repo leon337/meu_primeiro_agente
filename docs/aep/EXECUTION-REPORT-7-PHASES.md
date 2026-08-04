@@ -29,7 +29,7 @@ planejar
 
 Entregue: contrato, máquina de estados, SQLite transacional, controle otimista, eventos encadeados por SHA-256, aprovações, parada de emergência e memória sem segredos.
 
-Estado: **IMPLEMENTADA E TESTADA LOCALMENTE**.
+Estado: **IMPLEMENTADA E TESTADA**.
 
 ## Fase 2 — Operador web
 
@@ -65,29 +65,34 @@ Estado: **IMPLEMENTADO; SERVIÇO AINDA NÃO INSTALADO NO COMPUTADOR**.
 
 Entregue: testes, compilação, CI, documentação operacional, auditoria e gate com reservas.
 
-Validação local:
+Validação:
 
 ```yaml
-compileall: PASS
-pytest_aep: 13_PASS
-systemd_verify_local: NOT_APPLICABLE_PATH_DO_USUARIO_AUSENTE
-real_browser_smoke: NOT_EXECUTED
-real_desktop_smoke: NOT_EXECUTED
-production_deploy: NOT_EXECUTED
+compileall_local: PASS
+pytest_aep_local: 13_PASS
+ci_python_3_11: PASS
+ci_python_3_12: PASS
+ci_run: 30941747632
+systemd_verify_no_computador_de_Leandro: PENDENTE
+real_browser_smoke: PENDENTE
+real_desktop_smoke: PENDENTE
+production_deploy: NAO_EXECUTADO
 ```
 
-## Achado e correção durante o loop
+## Achados e correções durante o loop
 
-O primeiro ciclo permitia adicionar etapas após a missão já ter saído de `PLANNING`. O runtime foi corrigido para aceitar novas etapas somente em `PLANNING` ou `RECOVERING`, e os testes foram repetidos até `13/13 PASS`.
+1. O primeiro ciclo permitia adicionar etapas após a missão sair de `PLANNING`. O runtime foi corrigido para aceitar etapas apenas em `PLANNING` ou `RECOVERING`.
+2. O primeiro CI remoto encontrou um teste antigo que exigia `Hello Agent`; a interface já se chamava `Agente Executivo Pessoal`. O teste foi atualizado e o segundo ciclo ficou verde em Python 3.11 e 3.12.
 
 ## Estado geral
 
 ```yaml
 sete_fases_de_codigo: IMPLEMENTADAS
+ci_remoto: PASS
 controle_irrestrito: NAO
 shell_generico: NAO
 segredos_no_modelo: NAO
 execucao_real_web: DESATIVADA_POR_PADRAO
 execucao_real_desktop: DESATIVADA_POR_PADRAO
-merge: NAO_AUTORIZADO_ATE_CI_E_SMOKE_LOCAL
+merge: NAO_AUTORIZADO_ATE_SMOKES_LOCAIS
 ```
