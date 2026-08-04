@@ -10,7 +10,16 @@ from app.agent import Agent
 from app.chat_service import ChatService
 from app.models import ProviderResponse
 from app.providers.base import AIProvider
-from app.server import ChatRequest, chat, home, require_app_token, reset_session
+from app.server import (
+    ChatRequest,
+    chat,
+    data_deletion,
+    home,
+    privacy_policy,
+    require_app_token,
+    reset_session,
+    terms_of_service,
+)
 from app.whatsapp import incoming_texts, valid_signature
 
 
@@ -60,3 +69,17 @@ def test_pwa_home_is_available() -> None:
     response = home()
     assert Path(response.path).name == "index.html"
     assert "Hello Agent" in Path(response.path).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("route", "filename", "expected_text"),
+    [
+        (privacy_policy, "privacy.html", "Política de Privacidade"),
+        (terms_of_service, "terms.html", "Termos de Serviço"),
+        (data_deletion, "data-deletion.html", "Exclusão de Dados"),
+    ],
+)
+def test_public_legal_pages(route, filename: str, expected_text: str) -> None:  # type: ignore[no-untyped-def]
+    response = route()
+    assert Path(response.path).name == filename
+    assert expected_text in Path(response.path).read_text(encoding="utf-8")

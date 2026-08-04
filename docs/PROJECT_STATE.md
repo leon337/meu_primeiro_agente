@@ -20,8 +20,8 @@ A aplicação web está hospedada na Vercel e consulta o computador Linux por um
 | Aplicação de produção | `https://meu-primeiro-agente-indol.vercel.app` |
 | Ponte permanente | `https://hello-agent-pc.tail172717.ts.net` |
 | GitHub | `https://github.com/leon337/meu_primeiro_agente` |
-| Branch da evolução atual | `agent/permanent-local-bridge` |
-| Pull request | `https://github.com/leon337/meu_primeiro_agente/pull/2` |
+| Branch publicada | `main` |
+| Pull request da ponte | `https://github.com/leon337/meu_primeiro_agente/pull/2` (mesclado) |
 | Vercel team | `predix-ai-br` |
 | Vercel project | `meu-primeiro-agente` |
 
@@ -29,7 +29,7 @@ O hostname da ponte não é um segredo, mas o endpoint só aceita chamadas com `
 
 ## Estado comprovado
 
-- 23 testes automatizados aprovados.
+- 26 testes automatizados aprovados.
 - Deploy de produção concluído.
 - `GET /api/health` confirmou `gemini_configured: true`.
 - `GET /api/health` confirmou `bridge_configured: true`.
@@ -37,7 +37,9 @@ O hostname da ponte não é um segredo, mas o endpoint só aceita chamadas com `
 - Uma consulta real de disco atravessou Vercel → Tailscale → computador → ferramenta local.
 - Os serviços de usuário voltaram automaticamente após uma reinicialização real.
 - O Funnel voltou no mesmo hostname após reiniciar apenas o serviço Tailscale.
-- WhatsApp ainda não está configurado: `whatsapp_configured: false`.
+- `GET /api/health` confirmou `whatsapp_configured: true`.
+- Uma mensagem real enviada por outro WhatsApp atravessou Meta → Vercel → Gemini → ponte local e retornou corretamente com o espaço em disco do computador.
+- O token permanente da Meta pertence a um usuário de sistema com escopo mínimo `whatsapp_business_messaging`.
 
 ## Serviços locais
 
@@ -73,12 +75,12 @@ Na Vercel, `BRIDGE_URL` e `BRIDGE_DEVICE_TOKEN` estão aplicadas a Production e 
 
 ## O que ainda falta
 
-1. Revisar e mesclar o pull request atual em `main`.
-2. Configurar WhatsApp Cloud API e validar mensagens reais.
+1. Preencher no painel Meta as URLs públicas de privacidade, termos e exclusão de dados e concluir a publicação do aplicativo.
+2. Concluir a verificação empresarial e a configuração de cobrança exigidas pela Meta para ampliar o uso em produção.
 3. Adicionar persistência externa para conversas; hoje as sessões ficam em memória e podem desaparecer quando a função Vercel reinicia.
 4. Substituir o token compartilhado da PWA por autenticação individual antes de disponibilizar o app a vários usuários.
 5. Criar monitoramento e alerta para ponte desconectada.
 
 ## Próxima tarefa recomendada
 
-Integrar WhatsApp em ambiente de teste da Meta, começando pelas variáveis descritas em `docs/SETUP_AND_DEPLOYMENT.md`. Não altere a ponte local para executar novas capacidades durante essa etapa.
+Concluir os requisitos de publicação da Meta usando as páginas públicas já incluídas no projeto. O procedimento reproduzível está em `docs/WHATSAPP_DEPLOYMENT_TUTORIAL.md`. Não amplie as capacidades da ponte durante essa etapa.

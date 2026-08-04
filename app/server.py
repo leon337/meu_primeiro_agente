@@ -79,9 +79,24 @@ def home() -> FileResponse:
     return FileResponse(PUBLIC / "index.html")
 
 
+@app.get("/privacy", include_in_schema=False)
+def privacy_policy() -> FileResponse:
+    return FileResponse(PUBLIC / "privacy.html")
+
+
+@app.get("/terms", include_in_schema=False)
+def terms_of_service() -> FileResponse:
+    return FileResponse(PUBLIC / "terms.html")
+
+
+@app.get("/data-deletion", include_in_schema=False)
+def data_deletion() -> FileResponse:
+    return FileResponse(PUBLIC / "data-deletion.html")
+
+
 @app.get("/{asset_name}", include_in_schema=False)
 def pwa_asset(asset_name: str) -> FileResponse:
-    allowed_assets = {"app.js", "styles.css", "sw.js", "manifest.webmanifest", "icon.svg"}
+    allowed_assets = {"app.js", "styles.css", "legal.css", "sw.js", "manifest.webmanifest", "icon.svg"}
     if asset_name not in allowed_assets:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Arquivo não encontrado")
     return FileResponse(PUBLIC / asset_name)
@@ -150,7 +165,7 @@ def answer_whatsapp(sender: str, message: str) -> None:
         reply,
         os.environ["WHATSAPP_ACCESS_TOKEN"],
         os.environ["WHATSAPP_PHONE_NUMBER_ID"],
-        os.getenv("WHATSAPP_GRAPH_VERSION", "v23.0"),
+        os.getenv("WHATSAPP_GRAPH_VERSION", "v26.0"),
     )
 
 

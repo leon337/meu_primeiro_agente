@@ -20,9 +20,11 @@ O terminal virou FastAPI e recebeu uma PWA sem framework frontend. A interface g
 
 A PWA foi publicada na Vercel. `APP_ACCESS_TOKEN` protege os endpoints de conversa e reset.
 
-## 4. Preparação do WhatsApp
+## 4. Integração do WhatsApp
 
-Foram implementados handshake, validação HMAC, extração de mensagens de texto e envio pela Graph API. A implementação existe, mas a configuração da conta Meta e o teste real permanecem pendentes.
+Foram implementados handshake, validação HMAC, extração de mensagens de texto e envio pela Graph API. A conta de produção foi configurada com usuário de sistema dedicado, permissão mínima de mensagens e token permanente armazenado como segredo na Vercel.
+
+Uma mensagem real comprovou o fluxo WhatsApp → Meta → Vercel → Gemini → Tailscale → computador e retorno ao WhatsApp. O número deve ser usado no formato canônico exibido pela Meta, que pode diferir do formato digitado no cadastro.
 
 ## 5. Primeiro erro da nuvem
 
@@ -73,3 +75,12 @@ O desenho atual privilegia entendimento e segurança didática, não escala:
 - quatro ferramentas somente leitura.
 
 As próximas evoluções devem preservar essas fronteiras até que autenticação individual, persistência e auditoria estejam prontas.
+
+## 11. Lições do cadastro Meta
+
+- Uma conta pessoal com restrição comercial não deve ser usada para tentar contornar a decisão da Meta. O portfólio foi administrado por outra pessoa real, autorizada e sem restrição.
+- A Meta impediu a criação imediata de um usuário de sistema administrador porque o administrador humano tinha menos de sete dias. Um usuário de sistema **Employee** foi suficiente quando os ativos foram atribuídos diretamente.
+- O token temporário do painel não é adequado para produção. Foi criado um token permanente do usuário de sistema com somente `whatsapp_business_messaging`.
+- App, conta WhatsApp de teste, conta WhatsApp de produção e número de produção possuem identificadores diferentes. Misturá-los produz integrações que parecem configuradas, mas não respondem.
+- Alterar uma variável na Vercel não altera implantações antigas; um redeploy é obrigatório.
+- Segredos exibidos durante a configuração foram rotacionados antes do teste final.

@@ -8,7 +8,7 @@ Produção:
 curl https://meu-primeiro-agente-indol.vercel.app/api/health
 ```
 
-Resposta esperada enquanto WhatsApp não estiver configurado:
+Resposta esperada no estado atual:
 
 ```json
 {
@@ -16,7 +16,7 @@ Resposta esperada enquanto WhatsApp não estiver configurado:
   "gemini_configured": true,
   "bridge_configured": true,
   "bridge_connected": true,
-  "whatsapp_configured": false
+  "whatsapp_configured": true
 }
 ```
 
@@ -84,6 +84,23 @@ A interface atual lê a resposta como texto e tenta JSON com fallback. Se reapar
 ### A conversa esqueceu o histórico
 
 Isso é esperado após cold start ou troca de instância Vercel. O histórico ainda não possui banco durável.
+
+### WhatsApp mostra “Convidar para o WhatsApp”
+
+1. Não presuma a formatação do número a partir do chip ou da agenda.
+2. Abra o WhatsApp Manager e copie exatamente o número canônico exibido pela Meta.
+3. No Brasil, a normalização pode fazer o número exibido diferir do formato digitado durante o cadastro.
+4. Teste a partir de uma segunda conta; o número Cloud API não conversa consigo mesmo.
+5. Se o formato canônico também não funcionar, confirme que o número está como registrado e que a assinatura de webhooks está ativa.
+
+### A mensagem chega, mas o bot não responde
+
+1. Confirme `whatsapp_configured: true` em `/api/health`.
+2. Verifique se o app está inscrito no campo `messages` da conta de produção, não apenas da conta de teste.
+3. Confirme que `WHATSAPP_PHONE_NUMBER_ID` pertence ao número de produção correto.
+4. Confirme que o usuário de sistema possui acesso ao app e permissão **Mensagens** na conta WhatsApp.
+5. Gere o token com `whatsapp_business_messaging`, atualize a Vercel e faça redeploy.
+6. Consulte logs da Vercel sem imprimir cabeçalhos de autorização nem corpos contendo dados pessoais.
 
 ### O deploy tenta enviar sockets ou ferramentas locais
 

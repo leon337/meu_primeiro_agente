@@ -38,7 +38,7 @@ Preencha `.env` com valores novos. Nunca copie tokens de capturas de tela ou doc
 | `BRIDGE_DEVICE_TOKEN` | sim | sim | sim | autenticação Vercel → ponte |
 | `WHATSAPP_VERIFY_TOKEN` | não | ao ativar | sim | handshake do webhook |
 | `WHATSAPP_ACCESS_TOKEN` | não | ao ativar | sim | envio pela Graph API |
-| `WHATSAPP_PHONE_NUMBER_ID` | não | ao ativar | sim | número remetente |
+| `WHATSAPP_PHONE_NUMBER_ID` | não | ao ativar | não | identificador do número remetente |
 | `WHATSAPP_APP_SECRET` | não | ao ativar | sim | valida assinatura HMAC |
 | `WHATSAPP_GRAPH_VERSION` | não | ao ativar | não | versão da Graph API |
 
@@ -117,15 +117,24 @@ O primeiro uso abre uma página para habilitar HTTPS e a política Funnel. O hos
 
 ## WhatsApp Cloud API
 
-O código está pronto, mas a conta Meta ainda não foi configurada. Para ativar:
+A integração está ativa e foi validada com uma mensagem real. Para reproduzir em outra instalação:
 
-1. Crie ou selecione um app em Meta for Developers.
-2. Adicione o produto WhatsApp.
-3. Cadastre as cinco variáveis `WHATSAPP_*` na Vercel.
-4. Faça novo deploy.
-5. Use `https://meu-primeiro-agente-indol.vercel.app/api/whatsapp/webhook` como callback.
-6. Use em “Verify token” exatamente `WHATSAPP_VERIFY_TOKEN`.
-7. Assine o campo `messages`.
-8. Valide primeiro com o número de teste da Meta.
+1. Crie um portfólio empresarial legítimo e um app Meta com o caso de uso WhatsApp.
+2. Registre o número de produção e copie os identificadores exibidos pelo WhatsApp Manager.
+3. Configure e verifique o webhook `https://SEU-DOMINIO/api/whatsapp/webhook`.
+4. Assine o campo `messages` para a conta de produção.
+5. Crie um usuário de sistema dedicado, atribua o app e a conta WhatsApp e conceda somente **Mensagens**.
+6. Gere um token sem expiração com somente `whatsapp_business_messaging`.
+7. Cadastre todas as variáveis `WHATSAPP_*` como segredos na Vercel em Production e Preview.
+8. Faça um novo deploy e confirme `whatsapp_configured: true` em `/api/health`.
+9. Teste a partir de outro número, usando exatamente o formato canônico mostrado pela Meta.
 
-O POST só aceita corpo cuja assinatura `X-Hub-Signature-256` corresponda ao `WHATSAPP_APP_SECRET`.
+O POST só aceita corpo cuja assinatura `X-Hub-Signature-256` corresponda ao `WHATSAPP_APP_SECRET`. O tutorial detalhado, com telas esperadas, erros e recuperação, está em `WHATSAPP_DEPLOYMENT_TUTORIAL.md`.
+
+Para publicar o aplicativo, cadastre também:
+
+```text
+https://SEU-DOMINIO/privacy
+https://SEU-DOMINIO/terms
+https://SEU-DOMINIO/data-deletion
+```

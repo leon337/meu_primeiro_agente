@@ -31,7 +31,7 @@ flowchart LR
 | `app/bridge.py` | API local autenticada que expõe somente ferramentas aprovadas |
 | `app/tools/registry.py` | Lista fechada, esquema de parâmetros, despacho e auditoria |
 | `app/tools/remote.py` | Cliente HTTPS usado pela Vercel para conversar com a ponte |
-| `public/` | Interface PWA, manifest, service worker e estilos |
+| `public/` | Interface PWA, manifest, service worker, estilos e páginas legais públicas |
 | `systemd/` | Inicialização automática local |
 
 ## Fluxo de uma mensagem comum
