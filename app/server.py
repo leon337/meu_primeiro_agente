@@ -17,14 +17,19 @@ from app.chat_service import ChatService
 from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 from app.tools.remote import EmptyToolRegistry, RemoteToolRegistry
-from app.whatsapp import incoming_texts, send_text, valid_signature
+from app.whatsapp import MessageDeduplicator, incoming_messages, send_text, valid_signature
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Hello Agent", version="2.0.1")
+app = FastAPI(title="Hello Agent", version="2.1.0")
+_WHATSAPP_DEDUPLICATOR = MessageDeduplicator()
+_TEMPORARY_WHATSAPP_REPLY = (
+    "Estou com alta demanda no serviço de IA neste momento. "
+    "Sua mensagem foi recebida; aguarde um minuto e tente novamente."
+)
 
 
 class ChatRequest(BaseModel):
@@ -114,6 +119,7 @@ def health() -> dict[str, object]:
             pass
     return {
         "status": "ok",
+        "version": app.version,
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "bridge_configured": bool(bridge_url and bridge_token),
         "bridge_connected": bridge_connected,
@@ -129,7 +135,11 @@ def chat(payload: ChatRequest, service: Annotated[ChatService, Depends(get_chat_
     try:
         reply = service.chat(payload.session_id, payload.message)
     except RuntimeError as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            str(exc),
+            headers={"Retry-After": "60"},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     except Exception as exc:
@@ -159,14 +169,24 @@ def verify_whatsapp(
 
 
 def answer_whatsapp(sender: str, message: str) -> None:
-    reply = get_chat_service().chat(f"whatsapp:{sender}", message)
-    send_text(
-        sender,
-        reply,
-        os.environ["WHATSAPP_ACCESS_TOKEN"],
-        os.environ["WHATSAPP_PHONE_NUMBER_ID"],
-        os.getenv("WHATSAPP_GRAPH_VERSION", "v23.0"),
-    )
+    """Processa uma mensagem sem deixar falhas do Gemini matarem a tarefa."""
+
+    try:
+        reply = get_chat_service().chat(f"whatsapp:{sender}", message)
+    except Exception:
+        logger.exception("Falha ao responder mensagem do WhatsApp para %s", sender)
+        reply = _TEMPORARY_WHATSAPP_REPLY
+
+    try:
+        send_text(
+            sender,
+            reply,
+            os.environ["WHATSAPP_ACCESS_TOKEN"],
+            os.environ["WHATSAPP_PHONE_NUMBER_ID"],
+            os.getenv("WHATSAPP_GRAPH_VERSION", "v26.0"),
+        )
+    except Exception:
+        logger.exception("Falha ao enviar resposta do WhatsApp para %s", sender)
 
 
 @app.post("/api/whatsapp/webhook", status_code=200)
@@ -182,6 +202,13 @@ async def whatsapp_webhook(
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "JSON inválido") from exc
-    for sender, message in incoming_texts(payload):
+
+    accepted = 0
+    duplicates = 0
+    for message_id, sender, message in incoming_messages(payload):
+        if message_id and not _WHATSAPP_DEDUPLICATOR.claim(message_id):
+            duplicates += 1
+            continue
+        accepted += 1
         background_tasks.add_task(answer_whatsapp, sender, message)
-    return {"status": "accepted"}
+    return {"status": "accepted", "accepted": str(accepted), "duplicates": str(duplicates)}

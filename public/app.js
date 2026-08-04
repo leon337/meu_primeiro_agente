@@ -8,6 +8,8 @@ const accessTokenInput = document.querySelector("#accessToken");
 
 const sessionKey = "hello-agent-session";
 const tokenKey = "hello-agent-access-token";
+const requestTimeoutMs = 30000;
+let requestInFlight = false;
 let sessionId = localStorage.getItem(sessionKey) || crypto.randomUUID();
 localStorage.setItem(sessionKey, sessionId);
 accessTokenInput.value = localStorage.getItem(tokenKey) || "";
@@ -31,7 +33,7 @@ function authHeaders() {
 
 async function checkHealth() {
   try {
-    const response = await fetch("/api/health");
+    const response = await fetch("/api/health", { cache: "no-store" });
     const health = await response.json();
     if (!health.gemini_configured) statusLabel.textContent = "Configuração pendente";
     else if (health.bridge_connected) statusLabel.textContent = "Online • computador conectado";
@@ -42,14 +44,21 @@ async function checkHealth() {
 }
 
 async function sendMessage(message) {
+  if (requestInFlight) return;
+  requestInFlight = true;
   addMessage(message, "user");
   const pending = addMessage("Pensando…", "assistant", "pending");
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), requestTimeoutMs);
   sendButton.disabled = true;
+  input.disabled = true;
+
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ message, session_id: sessionId }),
+      signal: controller.signal,
     });
     const raw = await response.text();
     let payload;
@@ -60,17 +69,24 @@ async function sendMessage(message) {
     }
     if (!response.ok) throw new Error(payload.detail || "Não foi possível responder.");
     pending.querySelector(".bubble").textContent = payload.reply;
-    pending.classList.remove("pending");
   } catch (error) {
-    pending.querySelector(".bubble").textContent = `Erro: ${error.message}`;
+    const messageText = error.name === "AbortError"
+      ? "A resposta demorou mais de 30 segundos. Tente novamente em um minuto."
+      : `Erro: ${error.message}`;
+    pending.querySelector(".bubble").textContent = messageText;
   } finally {
+    window.clearTimeout(timeoutId);
+    pending.classList.remove("pending");
+    requestInFlight = false;
     sendButton.disabled = false;
+    input.disabled = false;
     input.focus();
   }
 }
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (requestInFlight) return;
   const message = input.value.trim();
   if (!message) return;
   input.value = "";
@@ -84,7 +100,7 @@ input.addEventListener("input", () => {
 });
 
 input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
+  if (event.key === "Enter" && !event.shiftKey && !requestInFlight) {
     event.preventDefault();
     form.requestSubmit();
   }
