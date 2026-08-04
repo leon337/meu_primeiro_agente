@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app/server.py": {
+      "includeFiles": "public/**",
       "excludeFiles": "{tests/**,.venv/**,.git/**}"
     }
   }

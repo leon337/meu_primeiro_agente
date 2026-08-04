@@ -245,6 +245,22 @@ A verificação empresarial e a cobrança podem ser exigidas para ampliar limite
 - formato diferente do canônico exibido no WhatsApp Manager;
 - número ainda não registrado ou webhook da WABA não assinado.
 
+### Páginas legais funcionam localmente, mas retornam HTTP 500 na Vercel
+
+O rastreador da função Python pode não incluir arquivos estáticos recém-adicionados. O projeto evita isso declarando explicitamente o diretório no `vercel.json`:
+
+```json
+{
+  "functions": {
+    "app/server.py": {
+      "includeFiles": "public/**"
+    }
+  }
+}
+```
+
+Depois da correção, faça uma nova implantação e teste cada URL pública. Um teste local que apenas lê o arquivo não prova que ele entrou no pacote da função na nuvem.
+
 ## 16. Checklist para outra IA continuar
 
 - [ ] Leu `AGENTS.md` e toda a documentação obrigatória.
