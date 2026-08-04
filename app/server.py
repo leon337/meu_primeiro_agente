@@ -1,4 +1,6 @@
-"""API web, PWA e webhook do WhatsApp."""
+"""API web, PWA, webhook do WhatsApp e relay controlado de missões MCF."""
+
+from __future__ import annotations
 
 from functools import lru_cache
 import json
@@ -6,7 +8,7 @@ import logging
 import os
 from pathlib import Path
 import secrets
-from typing import Annotated
+from typing import Annotated, Any
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request, status
@@ -14,6 +16,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.chat_service import ChatService
+from app.mcf.remote import RemoteMissionClient, RemoteMissionError
 from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 from app.tools.remote import EmptyToolRegistry, RemoteToolRegistry
@@ -24,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Hello Agent", version="2.0.0")
+app = FastAPI(title="Hello Agent", version="3.0.0")
 
 
 class ChatRequest(BaseModel):
@@ -34,6 +37,42 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class MissionRelayRequest(BaseModel):
+    mission_id: str = Field(min_length=1, max_length=128)
+    requester_agent: str = Field(min_length=1, max_length=80)
+    objective: str = Field(min_length=1, max_length=4000)
+    return_to: str = Field(min_length=1, max_length=128)
+    allowed_domains: list[str] = Field(default_factory=list, max_length=50)
+    allowed_capabilities: list[str] = Field(default_factory=list, max_length=30)
+    forbidden_actions: list[str] = Field(default_factory=list, max_length=50)
+    completion_criteria: list[str] = Field(min_length=1, max_length=30)
+    max_autonomy: int = Field(default=1, ge=1, le=5)
+
+
+class MissionTransitionRelayRequest(BaseModel):
+    target: str = Field(min_length=1, max_length=40)
+    expected_version: int | None = Field(default=None, ge=1)
+
+
+class MissionStepRelayRequest(BaseModel):
+    sequence: int = Field(ge=1, le=1000)
+    action: str = Field(min_length=1, max_length=80)
+    capability: str = Field(min_length=1, max_length=80)
+    target: str = Field(default="", max_length=2048)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class ApprovalRelayRequest(BaseModel):
+    approved: bool
+    actor: str = Field(min_length=1, max_length=80)
+    reason: str = Field(default="", max_length=500)
+
+
+class EmergencyRelayRequest(BaseModel):
+    actor: str = Field(min_length=1, max_length=80)
+    reason: str = Field(min_length=1, max_length=500)
 
 
 def get_tool_registry(allowed: Path) -> ToolExecutor:
@@ -61,6 +100,15 @@ def get_chat_service() -> ChatService:
         os.getenv("FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite"),
         registry=get_tool_registry(allowed),
     )
+
+
+@lru_cache
+def get_mission_client() -> RemoteMissionClient:
+    bridge_url = os.getenv("BRIDGE_URL", "").strip()
+    control_token = os.getenv("AEP_CONTROL_TOKEN", "").strip()
+    if not bridge_url or not control_token:
+        raise RuntimeError("Runtime executivo não configurado")
+    return RemoteMissionClient(bridge_url, control_token)
 
 
 def require_app_token(authorization: str | None = Header(default=None)) -> None:
@@ -102,6 +150,7 @@ def health() -> dict[str, object]:
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "bridge_configured": bool(bridge_url and bridge_token),
         "bridge_connected": bridge_connected,
+        "executive_configured": bool(bridge_url and os.getenv("AEP_CONTROL_TOKEN")),
         "whatsapp_configured": all(
             os.getenv(name)
             for name in ("WHATSAPP_VERIFY_TOKEN", "WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_APP_SECRET")
@@ -119,16 +168,67 @@ def chat(payload: ChatRequest, service: Annotated[ChatService, Depends(get_chat_
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     except Exception as exc:
         logger.exception("Falha ao processar conversa na sessão %s", payload.session_id)
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "O serviço de IA não conseguiu responder. Tente novamente.",
-        ) from exc
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "O serviço de IA não conseguiu responder. Tente novamente.") from exc
     return ChatResponse(reply=reply)
 
 
 @app.delete("/api/sessions/{session_id}", status_code=204, dependencies=[Depends(require_app_token)])
 def reset_session(session_id: str, service: Annotated[ChatService, Depends(get_chat_service)]) -> None:
     service.reset(session_id)
+
+
+def _relay_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, RuntimeError) and not isinstance(exc, RemoteMissionError):
+        return HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc))
+    return HTTPException(status.HTTP_502_BAD_GATEWAY, "Runtime executivo indisponível")
+
+
+@app.post("/api/missions", dependencies=[Depends(require_app_token)], status_code=201)
+def relay_create_mission(payload: MissionRelayRequest) -> dict[str, Any]:
+    try:
+        return get_mission_client().create_mission(payload.model_dump())
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
+
+
+@app.get("/api/missions/{mission_id}", dependencies=[Depends(require_app_token)])
+def relay_get_mission(mission_id: str) -> dict[str, Any]:
+    try:
+        return get_mission_client().get_mission(mission_id)
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
+
+
+@app.post("/api/missions/{mission_id}/transition", dependencies=[Depends(require_app_token)])
+def relay_transition_mission(mission_id: str, payload: MissionTransitionRelayRequest) -> dict[str, Any]:
+    try:
+        return get_mission_client().transition(mission_id, payload.target, payload.expected_version)
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
+
+
+@app.post("/api/missions/{mission_id}/steps", dependencies=[Depends(require_app_token)], status_code=201)
+def relay_add_step(mission_id: str, payload: MissionStepRelayRequest) -> dict[str, Any]:
+    try:
+        return get_mission_client().add_step(mission_id, payload.model_dump())
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
+
+
+@app.post("/api/missions/{mission_id}/steps/{step_id}/approval", dependencies=[Depends(require_app_token)])
+def relay_approval(mission_id: str, step_id: str, payload: ApprovalRelayRequest) -> dict[str, Any]:
+    try:
+        return get_mission_client().approve(mission_id, step_id, payload.approved, payload.actor, payload.reason)
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
+
+
+@app.post("/api/missions/{mission_id}/emergency-stop", dependencies=[Depends(require_app_token)])
+def relay_emergency_stop(mission_id: str, payload: EmergencyRelayRequest) -> dict[str, Any]:
+    try:
+        return get_mission_client().emergency_stop(mission_id, payload.actor, payload.reason)
+    except (RuntimeError, RemoteMissionError, ValueError) as exc:
+        raise _relay_error(exc) from exc
 
 
 @app.get("/api/whatsapp/webhook", response_class=PlainTextResponse)
