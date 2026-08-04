@@ -71,13 +71,15 @@ def test_pwa_home_is_available() -> None:
     assert "Hello Agent" in Path(response.path).read_text(encoding="utf-8")
 
 
-def test_public_compliance_pages_are_available() -> None:
+def test_public_compliance_pages_are_available_without_filesystem() -> None:
     pages = (
-        (privacy_policy(), "privacy.html", "Política de Privacidade"),
-        (data_deletion(), "data-deletion.html", "exclusão de dados"),
-        (terms_of_service(), "terms.html", "Termos de Serviço"),
+        (privacy_policy(), "Política de Privacidade"),
+        (data_deletion(), "Exclusão de Dados"),
+        (terms_of_service(), "Termos de Serviço"),
     )
-    for response, filename, expected_text in pages:
-        path = Path(response.path)
-        assert path.name == filename
-        assert expected_text.lower() in path.read_text(encoding="utf-8").lower()
+    for response, expected_text in pages:
+        body = response.body.decode("utf-8")
+        assert response.status_code == 200
+        assert response.media_type == "text/html"
+        assert expected_text.lower() in body.lower()
+        assert "eiasophia25@gmail.com" in body

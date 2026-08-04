@@ -10,10 +10,11 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.chat_service import ChatService
+from app.legal_pages import DATA_DELETION_HTML, PRIVACY_HTML, TERMS_HTML
 from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 from app.tools.remote import EmptyToolRegistry, RemoteToolRegistry
@@ -24,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Hello Agent", version="2.1.0")
+app = FastAPI(title="Hello Agent", version="2.1.1")
 _WHATSAPP_DEDUPLICATOR = MessageDeduplicator()
 _TEMPORARY_WHATSAPP_REPLY = (
     "Estou com alta demanda no serviço de IA neste momento. "
@@ -84,19 +85,19 @@ def home() -> FileResponse:
     return FileResponse(PUBLIC / "index.html")
 
 
-@app.get("/privacy", include_in_schema=False)
-def privacy_policy() -> FileResponse:
-    return FileResponse(PUBLIC / "privacy.html")
+@app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+def privacy_policy() -> HTMLResponse:
+    return HTMLResponse(PRIVACY_HTML)
 
 
-@app.get("/data-deletion", include_in_schema=False)
-def data_deletion() -> FileResponse:
-    return FileResponse(PUBLIC / "data-deletion.html")
+@app.get("/data-deletion", response_class=HTMLResponse, include_in_schema=False)
+def data_deletion() -> HTMLResponse:
+    return HTMLResponse(DATA_DELETION_HTML)
 
 
-@app.get("/terms", include_in_schema=False)
-def terms_of_service() -> FileResponse:
-    return FileResponse(PUBLIC / "terms.html")
+@app.get("/terms", response_class=HTMLResponse, include_in_schema=False)
+def terms_of_service() -> HTMLResponse:
+    return HTMLResponse(TERMS_HTML)
 
 
 @app.get("/{asset_name}", include_in_schema=False)
