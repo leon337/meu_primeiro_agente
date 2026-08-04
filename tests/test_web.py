@@ -10,7 +10,16 @@ from app.agent import Agent
 from app.chat_service import ChatService
 from app.models import ProviderResponse
 from app.providers.base import AIProvider
-from app.server import ChatRequest, chat, home, require_app_token, reset_session
+from app.server import (
+    ChatRequest,
+    chat,
+    data_deletion,
+    home,
+    privacy_policy,
+    require_app_token,
+    reset_session,
+    terms_of_service,
+)
 from app.whatsapp import incoming_texts, valid_signature
 
 
@@ -60,3 +69,15 @@ def test_pwa_home_is_available() -> None:
     response = home()
     assert Path(response.path).name == "index.html"
     assert "Hello Agent" in Path(response.path).read_text(encoding="utf-8")
+
+
+def test_public_compliance_pages_are_available() -> None:
+    pages = (
+        (privacy_policy(), "privacy.html", "Política de Privacidade"),
+        (data_deletion(), "data-deletion.html", "exclusão de dados"),
+        (terms_of_service(), "terms.html", "Termos de Serviço"),
+    )
+    for response, filename, expected_text in pages:
+        path = Path(response.path)
+        assert path.name == filename
+        assert expected_text.lower() in path.read_text(encoding="utf-8").lower()
