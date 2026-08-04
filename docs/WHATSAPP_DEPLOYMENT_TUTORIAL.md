@@ -247,19 +247,17 @@ A verificação empresarial e a cobrança podem ser exigidas para ampliar limite
 
 ### Páginas legais funcionam localmente, mas retornam HTTP 500 na Vercel
 
-O rastreador da função Python pode não incluir arquivos estáticos recém-adicionados. O projeto evita isso declarando explicitamente o diretório no `vercel.json`:
+Na Vercel, arquivos em `public/**` são publicados diretamente pela CDN. Eles não devem depender de `FileResponse` dentro da função Python. Confirme primeiro as URLs com extensão, como `/privacy.html`.
+
+Para expor os mesmos arquivos nas URLs exigidas pela Meta sem a extensão `.html`, este projeto ativa `cleanUrls` no `vercel.json`:
 
 ```json
 {
-  "functions": {
-    "app/server.py": {
-      "includeFiles": "public/**"
-    }
-  }
+  "cleanUrls": true
 }
 ```
 
-Depois da correção, faça uma nova implantação e teste cada URL pública. Um teste local que apenas lê o arquivo não prova que ele entrou no pacote da função na nuvem.
+Depois da correção, faça uma nova implantação e teste tanto `/privacy.html` quanto `/privacy`. Um teste local que apenas lê o arquivo não prova que o roteamento da CDN na nuvem está correto.
 
 ## 16. Checklist para outra IA continuar
 
