@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [fix/whatsapp-meta-publication]
+    branches: [main, fix/whatsapp-meta-publication]
 
 permissions:
   contents: read
@@ -25,3 +25,14 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m compileall -q app
       - run: python -m pytest -q
+      - name: Empacotar fonte validada
+        if: matrix.python-version == '3.12'
+        run: tar --exclude=.git --exclude=hello-agent-source.tgz -czf hello-agent-source.tgz .
+      - name: Publicar artefato de deploy
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-agent-source
+          path: hello-agent-source.tgz
+          if-no-files-found: error
+          retention-days: 1
