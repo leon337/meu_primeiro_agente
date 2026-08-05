@@ -45,7 +45,10 @@ def main() -> int:
         missions = service.repository.list_missions((MissionStatus.READY, MissionStatus.RUNNING))
         return [mission.mission_id for mission in missions if not mission.emergency_stopped]
 
-    worker.run_forever(mission_ids)
+    try:
+        worker.run_forever(mission_ids)
+    finally:
+        executor.close()
     return 0
 
 
