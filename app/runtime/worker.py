@@ -65,7 +65,7 @@ class AutonomousWorker:
                 self.stats.failed_steps += 1
                 break
         self.stats.cycles += 1
-        self._finish_or_fail(mission_id)
+        self._finish_fail_or_block(mission_id)
         return self.stats
 
     @staticmethod
@@ -89,12 +89,14 @@ class AutonomousWorker:
     def stop(self) -> None:
         self.stop_event.set()
 
-    def _finish_or_fail(self, mission_id: str) -> None:
+    def _finish_fail_or_block(self, mission_id: str) -> None:
         mission = self.service.repository.get_mission(mission_id)
         steps = self.service.repository.list_steps(mission_id)
         if mission.status != MissionStatus.RUNNING:
             return
         if any(step.status == StepStatus.FAILED for step in steps):
             self.service.transition(mission_id, MissionStatus.FAILED)
+        elif any(step.status == StepStatus.BLOCKED for step in steps):
+            self.service.transition(mission_id, MissionStatus.BLOCKED)
         elif steps and all(step.status == StepStatus.COMPLETED for step in steps):
             self.service.transition(mission_id, MissionStatus.COMPLETED)
