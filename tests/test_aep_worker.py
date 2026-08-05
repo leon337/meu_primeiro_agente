@@ -43,3 +43,24 @@ def test_worker_fails_mission_when_executor_is_missing(tmp_path: Path) -> None:
     assert step.status == StepStatus.FAILED
     assert "Executor não registrado" in step.sanitized_error
     assert service.repository.get_mission(mission.mission_id).status == MissionStatus.FAILED
+
+
+def test_worker_stops_reprocessing_policy_blocked_step(tmp_path: Path) -> None:
+    service = MissionService(SQLiteMissionRepository(tmp_path / "db.sqlite3"), PolicyEngine())
+    mission = service.create(Mission(
+        mission_id="MCF-WORKER-3",
+        requester="Mestre",
+        objective="Consultar domínio bloqueado",
+        return_to="Mestre",
+        allowed_domains=("vercel.com",),
+        allowed_capabilities=("observe",),
+        completion_criteria=("bloqueio registrado",),
+        max_autonomy=AutonomyLevel.OBSERVE,
+    ))
+    service.transition(mission.mission_id, MissionStatus.PLANNING)
+    step = service.add_step(MissionStep("step-3", mission.mission_id, 1, "navigate", "observe", "https://example.com"))
+    assert step.status == StepStatus.BLOCKED
+    service.transition(mission.mission_id, MissionStatus.READY)
+    worker = AutonomousWorker(service, {"observe": lambda _m, _s: {"status": "ok"}}, poll_interval=0)
+    worker.run_mission(mission.mission_id)
+    assert service.repository.get_mission(mission.mission_id).status == MissionStatus.BLOCKED
