@@ -2,9 +2,9 @@
 
 Pacote de rastreabilidade da fase corretiva da missão `MCF-AEP-001`.
 
-## Resultado pretendido
+## Resultado
 
-Registrar a não conformidade metodológica da execução anterior, preservar a evidência do gate local aprovado e reconstruir a continuidade documental sem fingir que artefatos inexistentes haviam sido produzidos no passado.
+A não conformidade metodológica da execução anterior foi registrada; o gate local aprovado foi preservado; a continuidade foi reconstruída com ações, evidências, commits e handoffs verificáveis, sem fingir que artefatos inexistentes haviam sido produzidos no passado.
 
 ## Ordem de leitura
 
@@ -17,15 +17,23 @@ Registrar a não conformidade metodológica da execução anterior, preservar a 
 7. `mission-trace.md` — ordem real, ações e handoffs;
 8. `PHASE-08-REPORT.md` — relatório da execução;
 9. `PHASE-08-DECISIONS.md` — decisões cronológicas;
-10. `PHASE-08-AUDIT.md` — auditoria independente;
+10. `PHASE-08-AUDIT.md` — auditoria independente em dois ciclos;
 11. `PHASE-08-GATE.md` — decisão operacional de Léo;
-12. `PHASE-08-CHECKPOINT.yaml` — estado transferível;
+12. `PHASE-08-CHECKPOINT.yaml` — estado final transferível;
 13. `PHASE-08-ARTIFACT-MANIFEST.sha256` — integridade do pacote.
 
 ## Regra de evidência
 
 Um nome de agente neste pacote indica responsabilidade funcional pelo artefato produzido nesta fase. Não significa processo independente oculto. A atuação só é aceita quando há ação externa verificável, arquivo, consulta, teste, commit ou decisão formal correspondente.
 
+## Limites preservados
+
+- merge não executado;
+- systemd não instalado;
+- deploy de produção não executado;
+- credenciais não incluídas;
+- navegador e desktop irrestritos não autorizados.
+
 ## Estado
 
-`EM_EXECUCAO` até auditoria, gate e manifesto final.
+`ENTREGUE`
