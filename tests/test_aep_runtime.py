@@ -41,7 +41,11 @@ def make_mission(mission_id: str = "MCF-TEST-001") -> Mission:
 def test_persistent_mission_lifecycle_and_event_chain(tmp_path: Path) -> None:
     service = make_service(tmp_path)
     created = service.create(make_mission())
-    service.transition(created.mission_id, MissionStatus.PLANNING)
+    planning = service.transition(created.mission_id, MissionStatus.PLANNING)
+    event_count = len(service.repository.list_events(created.mission_id))
+    repeated = service.transition(created.mission_id, MissionStatus.PLANNING)
+    assert repeated.version == planning.version
+    assert len(service.repository.list_events(created.mission_id)) == event_count
     service.transition(created.mission_id, MissionStatus.READY)
     reloaded = make_service(tmp_path).repository.get_mission(created.mission_id)
     assert reloaded.status == MissionStatus.READY
@@ -57,6 +61,8 @@ def test_invalid_transition_and_optimistic_lock(tmp_path: Path) -> None:
     service.transition(mission.mission_id, MissionStatus.PLANNING)
     with pytest.raises(ConcurrentUpdate):
         service.repository.update_mission(replace(stale, status=MissionStatus.CANCELLED), stale.version)
+    with pytest.raises(ConcurrentUpdate):
+        service.transition(mission.mission_id, MissionStatus.PLANNING, expected_version=stale.version)
 
 
 def test_secret_fields_are_rejected(tmp_path: Path) -> None:
@@ -102,7 +108,11 @@ def test_approval_gate_and_execution(tmp_path: Path) -> None:
     service.transition(mission.mission_id, MissionStatus.RUNNING)
     waiting = service.execute_step(step.step_id, lambda _m, _s: {"ok": True})
     assert waiting.status == StepStatus.WAITING_HUMAN
-    service.decide_approval(step.step_id, True, "Leandro")
+    approval = service.decide_approval(step.step_id, True, "Leandro")
+    event_count = len(service.repository.list_events(mission.mission_id))
+    repeated = service.decide_approval(step.step_id, True, "Leandro")
+    assert repeated.approval_id == approval.approval_id
+    assert len(service.repository.list_events(mission.mission_id)) == event_count
     completed = service.execute_step(step.step_id, lambda _m, _s: {"ok": True})
     assert completed.status == StepStatus.COMPLETED
     assert completed.approval_status == ApprovalStatus.APPROVED
@@ -115,6 +125,10 @@ def test_emergency_stop_cancels_open_steps(tmp_path: Path) -> None:
     service.add_step(MissionStep("s1", mission.mission_id, 1, "navigate", "observe", "https://vercel.com"))
     service.transition(mission.mission_id, MissionStatus.READY)
     stopped = service.emergency_stop(mission.mission_id, "Leandro", "teste")
+    event_count = len(service.repository.list_events(mission.mission_id))
+    repeated = service.emergency_stop(mission.mission_id, "Leandro", "teste repetido")
+    assert repeated.version == stopped.version
+    assert len(service.repository.list_events(mission.mission_id)) == event_count
     assert stopped.emergency_stopped
     assert service.repository.list_steps(mission.mission_id)[0].status == StepStatus.CANCELLED
 
