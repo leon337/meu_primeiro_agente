@@ -14,6 +14,10 @@ import tempfile
 import time
 from typing import Any
 
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import httpx
 
 from app.tools.remote import RemoteToolRegistry
@@ -143,7 +147,7 @@ def _extract_text(result: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parent.parent
+    root = ROOT
     if Path.cwd().resolve() != root:
         os.chdir(root)
 
