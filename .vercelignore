@@ -3,6 +3,8 @@
 .runtime/
 .tools/
 .venv/
+var/
+playwright/.auth/
 __pycache__/
 .pytest_cache/
 *.py[cod]
