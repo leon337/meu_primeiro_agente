@@ -1,0 +1,58 @@
+PHASE-08 VALIDATION FULL
+
+SUBJECT
+repository=leon337/meu_primeiro_agente
+pull_request=11
+branch=integration/aep-7-phases-2.1.3
+validated_code_head=3e4dfd5f9a770968d3a675bfde1e4a4a71b3b369
+pr_state_at_validation=open
+pr_draft_at_validation=true
+pr_mergeable_at_validation=true
+
+REMOTE WORKFLOW 1
+name=AEP CI
+run_id=30967983198
+run_number=23
+status=completed
+conclusion=success
+job_3_11_id=92185998183
+job_3_11_conclusion=success
+job_3_12_id=92185998205
+job_3_12_conclusion=success
+verified_steps:
+- python -m pip install -r requirements-executive.txt => success
+- python -m compileall -q app => success
+- node --check public/app.js => success
+- bash -n scripts/validate_aep_local.sh => success
+- python -m pytest -q => success
+
+REMOTE WORKFLOW 2
+name=WhatsApp Compliance CI
+run_id=30967983195
+run_number=36
+status=completed
+conclusion=success
+
+LOCAL EVIDENCE
+source=screenshot supplied by Leandro
+sha256=61a1db6cbf124a280bc434c62254e9d9fe6572b32f942acad7b33ed5aaeda909
+visible_output:
+=== COMPILAÇÃO E TESTES ===
+[100%]
+=== MISSÃO DRY-RUN, PERSISTÊNCIA E EMERGÊNCIA ===
+{"dry_run_completed_steps": 1, "dry_run_mission": "COMPLETED", "emergency_stop": "CANCELLED", "event_chain_verified": true, "idempotency": true, "receipt_verified": true}
+=== PLAYWRIGHT REAL SOMENTE LEITURA ===
+{"completed": 2, "mode": "real", "read_only_text_verified": true}
+LOCAL_GATE_RESULT=PASS
+
+INTERPRETATION
+- runtime local created, persisted and completed one dry-run step;
+- event chain and signed receipt were verified;
+- repeated requests were idempotent;
+- emergency stop cancelled its test mission;
+- Playwright executed two real read-only operations;
+- no systemd activation is evidenced;
+- no merge is evidenced;
+- no production deployment was requested by this phase.
+
+FINAL_VALIDATION=PASS

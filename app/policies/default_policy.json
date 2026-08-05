@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "default": "deny",
+  "human_only": ["financial", "legal", "identity_security", "shell", "credential_access"],
+  "approval_required": ["communicate", "publish", "install", "delete"],
+  "notes": "O modelo não pode alterar esta política em runtime."
+}

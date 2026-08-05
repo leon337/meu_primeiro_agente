@@ -1,0 +1,56 @@
+phase_id: PHASE-08-MCF-TRACEABILITY-REPAIR
+mission_id: MCF-AEP-001
+parent_mission_id: null
+risk_class: B
+cycle: 2
+source_repository: leon337/meu_primeiro_agente
+pull_request: 11
+branch: integration/aep-7-phases-2.1.3
+base_commit: 12a0b4f600e073bd8016d12ed077fcb97ba16820
+validated_code_commit: 3e4dfd5f9a770968d3a675bfde1e4a4a71b3b369
+objective_state: ENTREGUE
+completed_acceptance_criteria:
+  - nonconformity_recorded
+  - canonical_sources_registered
+  - phase_contract_created
+  - selected_agents_have_material_deliveries
+  - local_gate_evidence_preserved
+  - remote_workflows_verified
+  - validation_summary_created
+  - validation_full_created
+  - smoke_created
+  - mission_trace_created
+  - decisions_created
+  - report_created
+  - audit_cycle_1_completed
+  - checkpoint_created
+  - audit_cycle_2_passed
+  - leo_gate_approved_with_finalization
+  - final_manifest_scheduled_as_last_artifact
+remaining_gaps: []
+artifacts:
+  - PHASE-08-SOURCES.md
+  - PHASE-08-PLAN.md
+  - README.md
+  - PHASE-08-USER-EVIDENCE.md
+  - PHASE-08-VALIDATION.txt
+  - PHASE-08-VALIDATION-FULL.txt
+  - PHASE-08-SMOKE.txt
+  - mission-trace.md
+  - PHASE-08-DECISIONS.md
+  - PHASE-08-REPORT.md
+  - PHASE-08-AUDIT.md
+  - PHASE-08-GATE.md
+  - PHASE-08-CHECKPOINT.yaml
+  - PHASE-08-ARTIFACT-MANIFEST.sha256
+decisions:
+  - previous_retrospective_execution_rejected
+  - code_validation_remains_valid
+  - no_merge_no_systemd_no_production
+  - future_agent_attribution_requires_evidence
+  - phase_approved_by_leo_with_documental_finalization
+open_findings: []
+next_phase: null
+next_action: none_within_phase
+recipient: Mestre
+return_to: Leandro

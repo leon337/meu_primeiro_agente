@@ -1,7 +1,7 @@
 {
-  "name": "Hello Agent",
-  "short_name": "Hello Agent",
-  "description": "Assistente Gemini acessível pela web e WhatsApp.",
+  "name": "Agente Executivo Pessoal",
+  "short_name": "Agente Executivo",
+  "description": "Assistente pessoal com voz, integração MCF e execução local controlada.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07111f",
