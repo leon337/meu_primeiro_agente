@@ -1,5 +1,5 @@
 phase: PHASE-10-AEP-UNIVERSAL-APP-DEMO
-status: REMOTE_GATES_PASS_LOCAL_GATE_REQUIRED
+status: LOCAL_GATE_PASS_SECRET_ROTATION_REQUIRED
 objective:
   universal_registered_app_access: true
   financial_demo_mode: true
@@ -26,15 +26,40 @@ features:
   demo_contract_flag: demo_only
 remote_gates:
   aep_ci:
-    run_id: 31052559869
+    run_id: 31052710890
     python_3_11: PASS
     python_3_12: PASS
     conclusion: success
   vercel_preview:
-    deployment: 3LsLoopFQoH1gA2upkEPBwdDw5Yc
     status: PASS
+local_gate:
+  result: PASS
+  bridge_service: active
+  executive_service: active
+  registered_application_count: 159
+  applications:
+    - query: Brave
+      resolved_name: Hello Agent
+      desktop_id: brave-kibgpaeblmfaafcaodnokdkfblbamglo-Default
+      launched: true
+      focused: true
+    - query: Visual Studio Code
+      resolved_name: Visual Studio Code
+      desktop_id: code
+      launched: true
+      focused: true
+  demo_policy:
+    configured: true
+    allowed: true
+    requires_approval: true
+    decision_code: FINANCIAL_DEMO_CONFIRMATION
+    real_effect_blocked: true
+    real_effect_code: REAL_FINANCIAL_EFFECT_BLOCKED
+evidence:
+  - PHASE-10-LOCAL-GATE-EVIDENCE.md
 pending:
-  - local Linux Mint gate
-  - independent operational test of application launch and focus
-  - independent audit
-  - operational decision
+  - rotate previously exposed secrets
+  - final independent audit after secret rotation
+  - Léo operational gate
+  - explicit human merge authorization
+merge_authorized: false
