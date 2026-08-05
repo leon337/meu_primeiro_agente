@@ -1,4 +1,4 @@
-const CACHE = "hello-agent-v2";
+const CACHE = "hello-agent-aep-v3";
 const ASSETS = ["/", "/styles.css", "/app.js", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
