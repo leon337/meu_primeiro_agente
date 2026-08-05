@@ -1,0 +1,30 @@
+phase: PHASE-10-AEP-UNIVERSAL-APP-DEMO
+status: IMPLEMENTED_AWAITING_CI
+objective:
+  universal_registered_app_access: true
+  financial_demo_mode: true
+source_branch: feat/aep-universal-app-demo-mode
+base_head: d9fb6db3dae00f5eb00b384d3bb92b91a7b537cb
+controls:
+  arbitrary_shell: false
+  credentials_in_chat: false
+  real_financial_effect: false
+  real_order: false
+  deposit: false
+  withdrawal: false
+  human_confirmation_for_demo_financial_action: true
+features:
+  list_registered_applications: true
+  launch_registered_application: true
+  focus_registered_application: true
+  at_spi_named_controls: true
+  wmctrl_focus_fallback: true
+  xdotool_focus_fallback: true
+  allow_all_registered_apps_flag: AEP_DESKTOP_ALLOW_ALL_APPS
+  demo_contract_flag: demo_only
+pending:
+  - CI Python 3.11
+  - CI Python 3.12
+  - local Linux Mint gate
+  - independent audit
+  - operational decision
