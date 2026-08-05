@@ -1,0 +1,63 @@
+mission_id: MCF-AEP-002
+phase_id: PHASE-09-AEP-CHAT-BROWSER-ROUTING
+risk_class: C
+state: WAITING_LOCAL_GATE
+repository: leon337/meu_primeiro_agente
+branch: feat/aep-chat-browser-routing
+pull_request: 12
+base_commit: 07c69ee829f91ca0ed4bf7accfd1d7b99a8aeaec
+validated_code_head: 6fda5ec48ea17d1c9b1af5b13c946e25cee99262
+remote_validation:
+  aep_ci:
+    run_id: 31021462220
+    python_3_11: PASS
+    python_3_12: PASS
+  whatsapp_compliance_ci:
+    run_id: 31021462158
+    python_3_11: PASS
+    python_3_12: PASS
+audit:
+  verdict: PASS_WITH_LOCAL_ACTIVATION_GATE
+  artifact: PHASE-09-AUDIT.md
+gate:
+  decision: APPROVED_FOR_LOCAL_GATE
+  artifact: PHASE-09-GATE.md
+completed:
+  - diagnosis_confirmed
+  - executive_tools_exposed_to_chat
+  - web_whatsapp_voice_registry_verified
+  - mission_creation_planning_ready_implemented
+  - owner_authorization_persisted
+  - owner_authorization_policy_bound_to_chat_identity
+  - limited_polling_implemented
+  - executor_evidence_returned_in_receipt
+  - emergency_stop_preserved
+  - first_ci_failure_captured
+  - regression_corrected
+  - remote_aep_ci_passed
+  - remote_whatsapp_ci_passed
+  - isolated_local_gate_script_created
+  - independent_audit_completed
+  - local_gate_authorized
+pending:
+  - execute_scripts_validate_aep_chat_routing_local_py_on_leandro_notebook
+  - attach_local_gate_output
+  - validate_real_playwright_evidence
+  - final_audit
+  - leo_merge_deploy_decision
+  - production_web_smoke
+  - production_whatsapp_smoke
+not_delivered_in_this_increment:
+  - unrestricted_shell
+  - free_coordinate_mouse_control
+  - arbitrary_filesystem_write_delete
+  - arbitrary_application_installation
+  - real_at_spi_desktop_validation
+blocking_dependency:
+  type: EXTERNAL_LOCAL_ENVIRONMENT
+  owner: Leandro
+  reason: The assistant cannot execute Chromium and local processes on the user's notebook through the GitHub connector.
+next_command: .venv/bin/python scripts/validate_aep_chat_routing_local.py
+expected_result: PASS
+return_to: Mestre
+final_recipient: Leandro
