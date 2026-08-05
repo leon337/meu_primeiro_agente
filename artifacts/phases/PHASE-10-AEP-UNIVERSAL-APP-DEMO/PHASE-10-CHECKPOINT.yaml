@@ -1,10 +1,12 @@
 phase: PHASE-10-AEP-UNIVERSAL-APP-DEMO
-status: IMPLEMENTED_AWAITING_CI
+status: REMOTE_GATES_PASS_LOCAL_GATE_REQUIRED
 objective:
   universal_registered_app_access: true
   financial_demo_mode: true
 source_branch: feat/aep-universal-app-demo-mode
 base_head: d9fb6db3dae00f5eb00b384d3bb92b91a7b537cb
+validated_head: 2c909ce81a0c41a5b1886c60450bc0181b2d727f
+pull_request: 13
 controls:
   arbitrary_shell: false
   credentials_in_chat: false
@@ -22,9 +24,17 @@ features:
   xdotool_focus_fallback: true
   allow_all_registered_apps_flag: AEP_DESKTOP_ALLOW_ALL_APPS
   demo_contract_flag: demo_only
+remote_gates:
+  aep_ci:
+    run_id: 31052559869
+    python_3_11: PASS
+    python_3_12: PASS
+    conclusion: success
+  vercel_preview:
+    deployment: 3LsLoopFQoH1gA2upkEPBwdDw5Yc
+    status: PASS
 pending:
-  - CI Python 3.11
-  - CI Python 3.12
   - local Linux Mint gate
+  - independent operational test of application launch and focus
   - independent audit
   - operational decision
