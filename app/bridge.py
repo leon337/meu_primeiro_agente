@@ -37,6 +37,7 @@ class MissionCreateRequest(BaseModel):
     forbidden_actions: list[str] = Field(default_factory=list, max_length=50)
     completion_criteria: list[str] = Field(min_length=1, max_length=30)
     max_autonomy: int = Field(default=1, ge=1, le=5)
+    owner_authorized: bool = False
 
 
 class StepCreateRequest(BaseModel):
