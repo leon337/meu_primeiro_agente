@@ -50,8 +50,9 @@ class MCFAdapter:
         self.service = service
         self.signing_key = signing_key
 
-    def accept(self, request: MCFTaskRequest) -> Mission:
-        mission = Mission(
+    @staticmethod
+    def _mission_from_request(request: MCFTaskRequest) -> Mission:
+        return Mission(
             mission_id=request.mission_id,
             requester=request.requester_agent,
             objective=request.objective,
@@ -63,7 +64,20 @@ class MCFAdapter:
             max_autonomy=AutonomyLevel(request.max_autonomy),
             metadata={"source": "MCF", "contract_version": 1},
         )
-        return self.service.create(mission)
+
+    def accept(self, request: MCFTaskRequest) -> Mission:
+        candidate = self._mission_from_request(request)
+        try:
+            existing = self.service.repository.get_mission(request.mission_id)
+        except KeyError:
+            return self.service.create(candidate)
+        contract_fields = (
+            "requester", "objective", "return_to", "allowed_domains", "allowed_capabilities",
+            "forbidden_actions", "completion_criteria", "max_autonomy", "metadata",
+        )
+        if all(getattr(existing, field) == getattr(candidate, field) for field in contract_fields):
+            return existing
+        raise ValueError("Identificador de missão já existe com contrato divergente")
 
     def add_step(
         self,
@@ -75,6 +89,18 @@ class MCFAdapter:
         parameters: dict[str, Any] | None = None,
         risk: RiskLevel = RiskLevel.LOW,
     ) -> MissionStep:
+        normalized_parameters = parameters or {}
+        for existing in self.service.repository.list_steps(mission_id):
+            if existing.sequence != sequence:
+                continue
+            if (
+                existing.action == action
+                and existing.capability == capability
+                and existing.target == target
+                and existing.parameters == normalized_parameters
+            ):
+                return existing
+            raise ValueError("Sequência de etapa já existe com plano divergente")
         return self.service.add_step(
             MissionStep(
                 step_id=str(uuid4()),
@@ -83,7 +109,7 @@ class MCFAdapter:
                 action=action,
                 capability=capability,
                 target=target,
-                parameters=parameters or {},
+                parameters=normalized_parameters,
                 risk=risk,
             )
         )
