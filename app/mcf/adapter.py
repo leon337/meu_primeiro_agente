@@ -22,6 +22,7 @@ class MCFTaskRequest:
     forbidden_actions: tuple[str, ...]
     completion_criteria: tuple[str, ...]
     max_autonomy: int = 1
+    owner_authorized: bool = False
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "MCFTaskRequest":
@@ -42,6 +43,7 @@ class MCFTaskRequest:
             forbidden_actions=tuple(str(item) for item in payload.get("forbidden_actions", ())),
             completion_criteria=tuple(str(item) for item in payload["completion_criteria"]),
             max_autonomy=int(payload.get("max_autonomy", 1)),
+            owner_authorized=bool(payload.get("owner_authorized", False)),
         )
 
 
@@ -62,7 +64,11 @@ class MCFAdapter:
             forbidden_actions=request.forbidden_actions,
             completion_criteria=request.completion_criteria,
             max_autonomy=AutonomyLevel(request.max_autonomy),
-            metadata={"source": "MCF", "contract_version": 1},
+            metadata={
+                "source": "MCF",
+                "contract_version": 2,
+                "owner_authorized": request.owner_authorized,
+            },
         )
 
     def accept(self, request: MCFTaskRequest) -> Mission:
