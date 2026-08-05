@@ -4,7 +4,7 @@
 mission_id: MCF-AEP-001
 phase_id: PHASE-08-MCF-TRACEABILITY-REPAIR
 decision_authority: Leo
-gate_decision: APPROVED_WITH_FINALIZATION
+gate_decision: APPROVED
 ```
 
 ## Evidências consideradas
@@ -12,12 +12,14 @@ gate_decision: APPROVED_WITH_FINALIZATION
 - fontes canônicas registradas;
 - plano de fase Classe B;
 - captura local correlacionada por SHA-256;
-- AEP CI e WhatsApp Compliance CI aprovados;
+- AEP CI e WhatsApp Compliance CI técnicos aprovados;
 - validação resumida e expandida;
 - smoke ponta a ponta aprovado;
-- mission trace com handoffs reais;
-- relatório e decisões coerentes;
-- auditoria independente ciclo 2: `PASS_WITH_FINALIZATION`.
+- mission trace com handoffs reais e correção CAF;
+- relatório e decisões em estado final;
+- checkpoint `ENTREGUE`;
+- auditoria independente final: `PASS`;
+- checks documentais aprovados.
 
 ## Critérios atendidos
 
@@ -25,17 +27,12 @@ gate_decision: APPROVED_WITH_FINALIZATION
 - execução retrospectiva rejeitada como evidência;
 - artefato verificável por agente selecionado;
 - gate técnico local preservado;
+- PRF completo;
+- checkpoint transferível;
+- ciclos de auditoria e recuperação visíveis;
 - nenhum segredo exposto;
 - nenhuma ação irreversível executada;
 - nenhuma intervenção rotineira adicional de Leandro necessária.
-
-## Condições finais internas
-
-```yaml
-- generate_final_sha256_manifest
-- update_checkpoint_to_ENTREGUE
-- update_readme_final_state
-```
 
 ## Limites mantidos
 
@@ -50,4 +47,6 @@ credentials_in_artifacts: PROHIBITED
 
 ## Decisão
 
-A fase corretiva está aprovada quanto ao conteúdo e à metodologia. Gabriel, Miriam e Carmem podem executar apenas a finalização documental reversível. Após o manifesto e o checkpoint final, o Mestre pode declarar `ENTREGUE`.
+`APPROVED`.
+
+A fase corretiva `PHASE-08-MCF-TRACEABILITY-REPAIR` está aprovada e pode ser encerrada como `ENTREGUE` após a regeneração do manifesto final. Este gate corrige a metodologia e não autoriza merge, instalação de serviço ou alteração de produção.
