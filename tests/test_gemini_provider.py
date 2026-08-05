@@ -35,3 +35,31 @@ def test_failed_request_does_not_contaminate_history(method: str) -> None:
         else:
             provider.send_tool_results([("get_memory_usage", {"output": {}})])
     assert provider._history == []  # type: ignore[attr-defined]
+
+
+def test_provider_builds_unique_stable_model_chain() -> None:
+    provider = GeminiProvider(
+        api_key="fake-key",
+        model_name="gemini-3.6-flash",
+        tools=[],
+        fallback_model_name="gemini-3.5-flash-lite",
+    )
+
+    assert provider._model_names == [  # type: ignore[attr-defined]
+        "gemini-3.6-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash-lite",
+    ]
+
+
+def test_tool_policy_requires_explicit_local_request() -> None:
+    provider = GeminiProvider(
+        api_key="fake-key",
+        model_name="gemini-3.6-flash",
+        tools=[],
+    )
+
+    instruction = str(provider._config.system_instruction)  # type: ignore[attr-defined]
+    assert "somente quando o usuário pedir explicitamente" in instruction
+    assert "identificadores de teste" in instruction
