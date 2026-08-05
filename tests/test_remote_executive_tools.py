@@ -9,8 +9,9 @@ from app.tools.remote import RemoteToolRegistry
 
 
 class FakeMissionClient:
-    def __init__(self) -> None:
+    def __init__(self, mission_status: str = "COMPLETED") -> None:
         self.calls: list[tuple[str, Any]] = []
+        self.mission_status = mission_status
 
     def create_mission(self, payload: dict[str, Any]) -> dict[str, Any]:
         self.calls.append(("create", payload))
@@ -32,7 +33,11 @@ class FakeMissionClient:
 
     def get_mission(self, mission_id: str) -> dict[str, Any]:
         self.calls.append(("get", mission_id))
-        return {"mission_id": mission_id, "status": "COMPLETED"}
+        return {
+            "mission_id": mission_id,
+            "status": self.mission_status,
+            "receipt": {"payload": {"mission_id": mission_id, "status": self.mission_status}},
+        }
 
     def approve(
         self,
@@ -102,6 +107,7 @@ def test_submit_mission_creates_plans_and_releases_runtime() -> None:
             ],
             "completion_criteria": ["título devolvido com evidência"],
             "max_autonomy": 3,
+            "wait_seconds": 0,
         },
     )
 
@@ -114,10 +120,37 @@ def test_submit_mission_creates_plans_and_releases_runtime() -> None:
     assert created_payload["allowed_capabilities"] == ["observe"]
     assert created_payload["requester_agent"] == "ChatService"
     assert created_payload["return_to"] == "chat"
+    assert created_payload["owner_authorized"] is True
     assert "token" not in str(created_payload).lower()
 
     assert client.calls[1][2:] == ("PLANNING", 1)
     assert client.calls[-1][2:] == ("READY", 2)
+
+
+def test_submit_mission_waits_for_terminal_receipt() -> None:
+    client = FakeMissionClient("COMPLETED")
+    registry = make_registry(client)
+
+    result = registry.execute(
+        "aep_submit_mission",
+        {
+            "objective": "Abrir o site",
+            "steps": [
+                {
+                    "action": "navigate",
+                    "capability": "observe",
+                    "target": "https://example.com",
+                    "parameters": {"channel": "browser"},
+                }
+            ],
+            "wait_seconds": 1,
+        },
+    )
+
+    assert result["status"] == "COMPLETED"
+    assert result["receipt"]["payload"]["status"] == "COMPLETED"
+    assert [call[0] for call in client.calls][-1] == "get"
+    assert client.calls[0][1]["max_autonomy"] == 4
 
 
 def test_submit_mission_rejects_insecure_or_invalid_payloads() -> None:
@@ -150,6 +183,16 @@ def test_submit_mission_rejects_insecure_or_invalid_payloads() -> None:
 
     with pytest.raises(ToolError, match="1 a 20"):
         registry.execute("aep_submit_mission", {"objective": "Teste", "steps": []})
+
+    with pytest.raises(ToolError, match="0 e 15"):
+        registry.execute(
+            "aep_submit_mission",
+            {
+                "objective": "Teste",
+                "steps": [{"action": "navigate", "capability": "observe"}],
+                "wait_seconds": 16,
+            },
+        )
 
 
 def test_status_approval_and_emergency_are_forwarded() -> None:
