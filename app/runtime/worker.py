@@ -53,8 +53,7 @@ class AutonomousWorker:
                 continue
             executor = self.executors.get(step.capability)
             if executor is None:
-                self.stats.failed_steps += 1
-                continue
+                executor = self._missing_executor(step.capability)
             result = self.service.execute_step(step.step_id, executor)
             processed += 1
             if result.status == StepStatus.COMPLETED:
@@ -66,8 +65,15 @@ class AutonomousWorker:
                 self.stats.failed_steps += 1
                 break
         self.stats.cycles += 1
-        self._finish_if_complete(mission_id)
+        self._finish_or_fail(mission_id)
         return self.stats
+
+    @staticmethod
+    def _missing_executor(capability: str) -> Executor:
+        def fail(_mission: Mission, _step: MissionStep) -> dict[str, object]:
+            raise RuntimeError(f"Executor não registrado para a capacidade {capability}")
+
+        return fail
 
     def run_forever(self, mission_ids: Callable[[], list[str]]) -> None:
         while not self.stop_event.is_set():
@@ -83,8 +89,12 @@ class AutonomousWorker:
     def stop(self) -> None:
         self.stop_event.set()
 
-    def _finish_if_complete(self, mission_id: str) -> None:
+    def _finish_or_fail(self, mission_id: str) -> None:
         mission = self.service.repository.get_mission(mission_id)
         steps = self.service.repository.list_steps(mission_id)
-        if steps and all(step.status == StepStatus.COMPLETED for step in steps) and mission.status == MissionStatus.RUNNING:
+        if mission.status != MissionStatus.RUNNING:
+            return
+        if any(step.status == StepStatus.FAILED for step in steps):
+            self.service.transition(mission_id, MissionStatus.FAILED)
+        elif steps and all(step.status == StepStatus.COMPLETED for step in steps):
             self.service.transition(mission_id, MissionStatus.COMPLETED)
