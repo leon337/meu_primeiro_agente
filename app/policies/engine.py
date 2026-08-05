@@ -42,6 +42,14 @@ class PolicyEngine:
             return PolicyDecision(False, True, RiskLevel.CRITICAL, "HUMAN_ONLY", "Ação reservada exclusivamente ao humano")
 
         if capability in HIGH_IMPACT:
+            if self._owner_authorized(mission) and mission.max_autonomy >= AutonomyLevel.CONFIRM_HIGH_IMPACT:
+                return PolicyDecision(
+                    True,
+                    False,
+                    RiskLevel.HIGH,
+                    "OWNER_AUTHORIZED",
+                    "Ação abrangida pela autorização persistente do proprietário",
+                )
             return PolicyDecision(True, True, RiskLevel.HIGH, "HUMAN_CONFIRMATION", "Confirmação humana obrigatória")
 
         required = {
@@ -54,6 +62,14 @@ class PolicyEngine:
 
         risk = RiskLevel.LOW if capability == CapabilityClass.OBSERVE else RiskLevel.MEDIUM
         return PolicyDecision(True, False, risk, "ALLOWED", "Ação autorizada pela política")
+
+    @staticmethod
+    def _owner_authorized(mission: Mission) -> bool:
+        return (
+            mission.requester == "ChatService"
+            and mission.return_to == "chat"
+            and mission.metadata.get("owner_authorized") is True
+        )
 
     @staticmethod
     def _domain(target: str) -> str:
