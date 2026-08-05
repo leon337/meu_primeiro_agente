@@ -2,13 +2,13 @@ phase_id: PHASE-08-MCF-TRACEABILITY-REPAIR
 mission_id: MCF-AEP-001
 parent_mission_id: null
 risk_class: B
-cycle: 1
+cycle: 2
 source_repository: leon337/meu_primeiro_agente
 pull_request: 11
 branch: integration/aep-7-phases-2.1.3
 base_commit: 12a0b4f600e073bd8016d12ed077fcb97ba16820
 validated_code_commit: 3e4dfd5f9a770968d3a675bfde1e4a4a71b3b369
-objective_state: AWAITING_INTEGRITY_AND_GATE
+objective_state: ENTREGUE
 completed_acceptance_criteria:
   - nonconformity_recorded
   - canonical_sources_registered
@@ -23,10 +23,11 @@ completed_acceptance_criteria:
   - decisions_created
   - report_created
   - audit_cycle_1_completed
-remaining_gaps:
-  - artifact_manifest
-  - audit_cycle_2
-  - leo_gate
+  - checkpoint_created
+  - audit_cycle_2_passed
+  - leo_gate_approved_with_finalization
+  - final_manifest_scheduled_as_last_artifact
+remaining_gaps: []
 artifacts:
   - PHASE-08-SOURCES.md
   - PHASE-08-PLAN.md
@@ -39,16 +40,17 @@ artifacts:
   - PHASE-08-DECISIONS.md
   - PHASE-08-REPORT.md
   - PHASE-08-AUDIT.md
+  - PHASE-08-GATE.md
   - PHASE-08-CHECKPOINT.yaml
+  - PHASE-08-ARTIFACT-MANIFEST.sha256
 decisions:
   - previous_retrospective_execution_rejected
   - code_validation_remains_valid
   - no_merge_no_systemd_no_production
   - future_agent_attribution_requires_evidence
-open_findings:
-  - AUD-08-002 artifact manifest missing
-  - AUD-08-003 Leo gate missing
+  - phase_approved_by_leo_with_documental_finalization
+open_findings: []
 next_phase: null
-next_action: generate_sha256_manifest
-recipient: Gabriel
-return_to: Emily
+next_action: none_within_phase
+recipient: Mestre
+return_to: Leandro
