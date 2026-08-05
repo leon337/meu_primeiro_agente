@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -166,8 +167,13 @@ class RemoteToolRegistry:
         self.device_token = device_token.strip()
         self.timeout = timeout
         self._mission_client = mission_client
-        if self._mission_client is None and control_token and control_token.strip():
-            self._mission_client = RemoteMissionClient(self.bridge_url, control_token.strip(), timeout=timeout)
+        effective_control_token = control_token if control_token is not None else os.getenv("AEP_CONTROL_TOKEN", "")
+        if self._mission_client is None and effective_control_token.strip():
+            self._mission_client = RemoteMissionClient(
+                self.bridge_url,
+                effective_control_token.strip(),
+                timeout=timeout,
+            )
 
     @staticmethod
     def _validate_url(value: str) -> str:
@@ -290,7 +296,9 @@ class RemoteToolRegistry:
         configured_domains = arguments.get("allowed_domains", [])
         if not isinstance(configured_domains, list):
             raise ToolError("allowed_domains deve ser uma lista")
-        domains = sorted({str(item).strip().lower() for item in configured_domains if str(item).strip()} | derived_domains)
+        domains = sorted(
+            {str(item).strip().lower() for item in configured_domains if str(item).strip()} | derived_domains
+        )
         criteria = arguments.get("completion_criteria", ["todas as etapas concluídas com evidência"])
         if not isinstance(criteria, list) or not criteria:
             raise ToolError("completion_criteria deve ser uma lista não vazia")
