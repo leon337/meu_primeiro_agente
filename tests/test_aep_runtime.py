@@ -119,10 +119,8 @@ def test_emergency_stop_cancels_open_steps(tmp_path: Path) -> None:
     assert service.repository.list_steps(mission.mission_id)[0].status == StepStatus.CANCELLED
 
 
-def test_mcf_adapter_and_receipt(tmp_path: Path) -> None:
-    service = make_service(tmp_path)
-    adapter = MCFAdapter(service, "assinatura-local")
-    request = MCFTaskRequest(
+def make_mcf_request() -> MCFTaskRequest:
+    return MCFTaskRequest(
         mission_id="MCF-AEP-900",
         requester_agent="Bruno",
         objective="Consultar deploy",
@@ -133,9 +131,50 @@ def test_mcf_adapter_and_receipt(tmp_path: Path) -> None:
         completion_criteria=("resultado",),
         max_autonomy=1,
     )
+
+
+def test_mcf_adapter_and_receipt(tmp_path: Path) -> None:
+    service = make_service(tmp_path)
+    adapter = MCFAdapter(service, "assinatura-local")
+    request = make_mcf_request()
     adapter.accept(request)
     packet = adapter.result_packet(request.mission_id)
     assert verify_receipt(packet, "assinatura-local")
+
+
+def test_mcf_contract_and_step_are_idempotent(tmp_path: Path) -> None:
+    service = make_service(tmp_path)
+    adapter = MCFAdapter(service)
+    request = make_mcf_request()
+    first = adapter.accept(request)
+    second = adapter.accept(request)
+    assert first.mission_id == second.mission_id
+    assert len(service.repository.list_events(request.mission_id)) == 1
+
+    service.transition(request.mission_id, MissionStatus.PLANNING)
+    first_step = adapter.add_step(
+        request.mission_id,
+        1,
+        "read_text",
+        "observe",
+        "https://vercel.com/dashboard",
+        {"selector": "h1"},
+    )
+    second_step = adapter.add_step(
+        request.mission_id,
+        1,
+        "read_text",
+        "observe",
+        "https://vercel.com/dashboard",
+        {"selector": "h1"},
+    )
+    assert first_step.step_id == second_step.step_id
+    assert len(service.repository.list_steps(request.mission_id)) == 1
+
+    with pytest.raises(ValueError, match="contrato divergente"):
+        adapter.accept(replace(request, objective="Objetivo diferente"))
+    with pytest.raises(ValueError, match="plano divergente"):
+        adapter.add_step(request.mission_id, 1, "click", "observe", "https://vercel.com", {"selector": "button"})
 
 
 def test_operational_memory_rejects_secrets(tmp_path: Path) -> None:
