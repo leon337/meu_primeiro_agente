@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import signal
 
+from dotenv import load_dotenv
+
 from app.missions.models import MissionStatus
 from app.runtime.executors import ExecutiveActionExecutor
 from app.runtime.factory import create_runtime
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> int:
+    load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
     service, _ = create_runtime()
     executor = ExecutiveActionExecutor()
