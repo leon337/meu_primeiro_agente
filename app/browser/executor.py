@@ -45,12 +45,14 @@ class PlaywrightBrowserExecutor:
         allowed_domains: Iterable[str],
         credential_broker: CredentialBroker | None = None,
         profile_directory: str | Path | None = None,
+        output_directory: str | Path = "var/aep",
         dry_run: bool = True,
         headless: bool = False,
     ) -> None:
-        self.allowed_domains = tuple(item.lower().strip(".") for item in allowed_domains)
+        self.allowed_domains = tuple(item.lower().strip(".") for item in allowed_domains if item.strip("."))
         self.credential_broker = credential_broker or NullCredentialBroker()
         self.profile_directory = Path(profile_directory).expanduser() if profile_directory else None
+        self.output_directory = Path(output_directory).expanduser().resolve()
         self.dry_run = dry_run
         self.headless = headless
 
@@ -68,6 +70,8 @@ class PlaywrightBrowserExecutor:
         if not actions:
             raise BrowserExecutionError("Plano de navegador vazio")
         for action in actions:
+            if action.operation == BrowserOperation.NAVIGATE and not action.url:
+                raise BrowserExecutionError("Navegação exige URL")
             if action.url:
                 self._validate_url(action.url)
             if action.operation == BrowserOperation.FILL_CREDENTIAL and not action.credential_ref:
@@ -80,8 +84,14 @@ class PlaywrightBrowserExecutor:
                 BrowserOperation.FILL_CREDENTIAL,
                 BrowserOperation.SELECT,
                 BrowserOperation.READ_TEXT,
+                BrowserOperation.DOWNLOAD,
+                BrowserOperation.SUBMIT,
             } and not action.selector:
                 raise BrowserExecutionError(f"A operação {action.operation} exige seletor")
+            if action.operation == BrowserOperation.SCREENSHOT:
+                self._safe_output_path(action.value, "evidence/browser.png")
+            if action.operation == BrowserOperation.DOWNLOAD:
+                self._safe_output_path(action.value, "downloads")
 
     def _validate_url(self, value: str) -> None:
         parsed = urlsplit(value)
@@ -90,6 +100,17 @@ class PlaywrightBrowserExecutor:
         domain = parsed.hostname.lower()
         if not any(domain == allowed or domain.endswith("." + allowed) for allowed in self.allowed_domains):
             raise BrowserExecutionError(f"Domínio não permitido: {domain}")
+
+    def _safe_output_path(self, value: str, default_relative: str) -> Path:
+        relative = Path(value or default_relative)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise BrowserExecutionError("Caminho de saída fora do diretório operacional")
+        resolved = (self.output_directory / relative).resolve()
+        try:
+            resolved.relative_to(self.output_directory)
+        except ValueError as exc:
+            raise BrowserExecutionError("Caminho de saída fora do diretório operacional") from exc
+        return resolved
 
     @staticmethod
     def _public_action(action: BrowserAction) -> dict[str, object]:
@@ -148,18 +169,19 @@ class PlaywrightBrowserExecutor:
         elif operation == BrowserOperation.SELECT:
             locator.select_option(action.value)
         elif operation == BrowserOperation.SCREENSHOT:
-            output = str(Path(action.value or "var/evidence/browser.png"))
-            Path(output).parent.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=output, full_page=bool(action.options.get("full_page", True)))
-            return {"operation": operation, "path": output}
+            output = self._safe_output_path(action.value, "evidence/browser.png")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(output), full_page=bool(action.options.get("full_page", True)))
+            return {"operation": operation, "path": str(output)}
         elif operation == BrowserOperation.DOWNLOAD:
             with page.expect_download() as download_info:
                 locator.click()
             download = download_info.value
-            output = str(Path(action.value or "var/downloads") / download.suggested_filename)
-            Path(output).parent.mkdir(parents=True, exist_ok=True)
-            download.save_as(output)
-            return {"operation": operation, "path": output}
+            directory = self._safe_output_path(action.value, "downloads")
+            directory.mkdir(parents=True, exist_ok=True)
+            output = directory / Path(download.suggested_filename).name
+            download.save_as(str(output))
+            return {"operation": operation, "path": str(output)}
         elif operation == BrowserOperation.SUBMIT:
             locator.click()
         else:
