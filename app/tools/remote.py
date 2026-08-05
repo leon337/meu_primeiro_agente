@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from time import monotonic, sleep
 from typing import Any
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -20,6 +21,7 @@ _EXECUTIVE_TOOL_NAMES = {
     "aep_approve_step",
     "aep_emergency_stop",
 }
+_TERMINAL_MISSION_STATES = {"COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "WAITING_HUMAN"}
 
 
 def executive_tool_definitions() -> list[ToolDefinition]:
@@ -64,7 +66,7 @@ def executive_tool_definitions() -> list[ToolDefinition]:
             "aep_submit_mission",
             (
                 "Cria e libera uma missão no runtime executivo local quando o usuário pedir explicitamente "
-                "uma ação no navegador ou no computador. Retorna o identificador para acompanhamento."
+                "uma ação no navegador ou no computador. Retorna o identificador e aguarda brevemente o resultado."
             ),
             {
                 "type": "object",
@@ -95,7 +97,13 @@ def executive_tool_definitions() -> list[ToolDefinition]:
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "Nível máximo de autonomia da missão; padrão 3.",
+                        "description": "Nível máximo de autonomia da missão; padrão 4.",
+                    },
+                    "wait_seconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 15,
+                        "description": "Tempo máximo para aguardar resultado; padrão 8 segundos.",
                     },
                 },
                 "required": ["objective", "steps"],
@@ -256,7 +264,15 @@ class RemoteToolRegistry:
     def _submit_mission(self, arguments: dict[str, Any]) -> dict[str, Any]:
         self._reject_unexpected(
             arguments,
-            {"objective", "steps", "allowed_domains", "completion_criteria", "forbidden_actions", "max_autonomy"},
+            {
+                "objective",
+                "steps",
+                "allowed_domains",
+                "completion_criteria",
+                "forbidden_actions",
+                "max_autonomy",
+                "wait_seconds",
+            },
         )
         objective = self._required_text(arguments, "objective")
         raw_steps = arguments.get("steps")
@@ -305,9 +321,12 @@ class RemoteToolRegistry:
         forbidden = arguments.get("forbidden_actions", [])
         if not isinstance(forbidden, list):
             raise ToolError("forbidden_actions deve ser uma lista")
-        max_autonomy = arguments.get("max_autonomy", 3)
+        max_autonomy = arguments.get("max_autonomy", 4)
         if not isinstance(max_autonomy, int) or not 1 <= max_autonomy <= 5:
             raise ToolError("max_autonomy deve estar entre 1 e 5")
+        wait_seconds = arguments.get("wait_seconds", 8)
+        if not isinstance(wait_seconds, int) or not 0 <= wait_seconds <= 15:
+            raise ToolError("wait_seconds deve estar entre 0 e 15")
 
         mission_id = f"CHAT-{uuid4()}"
         created = self._mission_client.create_mission(
@@ -321,18 +340,34 @@ class RemoteToolRegistry:
                 "forbidden_actions": [str(item) for item in forbidden],
                 "completion_criteria": [str(item) for item in criteria],
                 "max_autonomy": max_autonomy,
+                "owner_authorized": True,
             }
         )
         planning = self._mission_client.transition(mission_id, "PLANNING", created.get("version"))
         planned_steps = [self._mission_client.add_step(mission_id, step) for step in steps]
         ready = self._mission_client.transition(mission_id, "READY", planning.get("version"))
-        return {
+        result: dict[str, Any] = {
             "mission_id": mission_id,
             "status": ready.get("status", "READY"),
             "version": ready.get("version"),
             "planned_steps": planned_steps,
             "message": "Missão enviada ao runtime local para execução e auditoria.",
         }
+        if wait_seconds == 0:
+            return result
+
+        deadline = monotonic() + wait_seconds
+        while True:
+            current = self._mission_client.get_mission(mission_id)
+            result.update(current)
+            if str(current.get("status", "")) in _TERMINAL_MISSION_STATES:
+                result["message"] = "Runtime local devolveu o estado e o recibo da missão."
+                return result
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                result["message"] = "Missão continua em execução; use aep_get_mission para acompanhar."
+                return result
+            sleep(min(0.5, remaining))
 
     @staticmethod
     def _required_text(arguments: dict[str, Any], key: str) -> str:
