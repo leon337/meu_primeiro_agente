@@ -4,48 +4,58 @@
 mission_id: MCF-AEP-001
 phase_id: PHASE-08-MCF-TRACEABILITY-REPAIR
 auditor: Emily
-audit_cycle: 1
-decision: RETURN_FOR_CLOSURE
+audit_cycle: 2
+decision: PASS_WITH_FINALIZATION
 ```
 
 ## Escopo auditado
 
 - conformidade com ESEV;
-- completude do PRF;
+- completude substantiva do PRF;
 - correlação entre conclusões e evidências;
 - existência de handoffs;
 - tratamento da falha metodológica;
-- preservação dos limites operacionais.
+- preservação dos limites operacionais;
+- transferibilidade do checkpoint.
 
 ## Achados aprovados
 
 1. a não conformidade anterior foi declarada explicitamente;
 2. nenhuma fala anterior foi promovida retroativamente a evidência;
-3. os agentes selecionados nesta fase possuem entrega material;
+3. cada agente selecionado nesta fase possui ação e entrega material verificável;
 4. os commits e caminhos dos artefatos estão registrados;
 5. a captura fornecida por Leandro possui hash preservado;
 6. os workflows remotos foram consultados e concluíram com sucesso;
 7. o resultado local `PASS` é sustentado pela saída visível;
 8. nenhuma ação de merge, systemd ou produção foi declarada como executada;
-9. o mission trace mostra passagens intercaladas desta fase.
+9. o mission trace mostra passagens intercaladas desta fase;
+10. plano, decisões, relatório, validação, smoke e checkpoint são coerentes;
+11. o checkpoint permite retomada sem reconstrução inventada.
 
-## Não conformidades remanescentes
+## Achados do ciclo 1
 
 ```yaml
-- id: AUD-08-001
-  severity: blocking
-  finding: PHASE-08-CHECKPOINT.yaml ainda ausente
-  return_to: Miriam
-- id: AUD-08-002
-  severity: blocking
-  finding: PHASE-08-ARTIFACT-MANIFEST.sha256 ainda ausente
-  return_to: Gabriel
-- id: AUD-08-003
-  severity: blocking
-  finding: decisão operacional de Léo ainda ausente
-  return_to: Leo_after_manifest
+AUD-08-001:
+  finding: checkpoint ausente
+  status: RESOLVIDO
+AUD-08-002:
+  finding: manifesto ausente
+  status: PENDENTE_COMO_ETAPA_FINAL
+AUD-08-003:
+  finding: gate de Leo ausente
+  status: ENCAMINHADO_A_LEO
 ```
+
+## Riscos residuais
+
+- a execução técnica validada pertence ao commit `3e4dfd5f9a770968d3a675bfde1e4a4a71b3b369`;
+- commits posteriores desta branch são documentais;
+- systemd permanece não instalado;
+- merge permanece não executado;
+- o manifesto final deve ser produzido depois dos documentos de fechamento.
 
 ## Decisão
 
-A evidência técnica é suficiente, porém a fase não está pronta para gate. Retornar ao fluxo para completar checkpoint e manifesto; depois executar auditoria de ciclo 2.
+`PASS_WITH_FINALIZATION`.
+
+O conteúdo substantivo da fase está aprovado. Léo pode emitir gate condicionado à criação do manifesto SHA-256 final e à atualização do checkpoint para o estado entregue.
