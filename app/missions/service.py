@@ -15,7 +15,7 @@ from app.missions.models import (
     StepStatus,
     utc_now,
 )
-from app.missions.repository import SQLiteMissionRepository
+from app.missions.repository import ConcurrentUpdate, SQLiteMissionRepository
 from app.missions.state_machine import validate_mission_transition, validate_step_transition
 from app.policies.engine import PolicyDecision, PolicyEngine
 
@@ -49,6 +49,10 @@ class MissionService:
 
     def transition(self, mission_id: str, target: MissionStatus, expected_version: int | None = None) -> Mission:
         mission = self.repository.get_mission(mission_id)
+        if mission.status == target:
+            if expected_version is None or expected_version == mission.version:
+                return mission
+            raise ConcurrentUpdate(f"Versão divergente para {mission.mission_id}")
         if mission.emergency_stopped and target not in {MissionStatus.CANCELLED, MissionStatus.FAILED}:
             raise MissionValidationError("Missão parada por emergência")
         validate_mission_transition(mission.status, target)
@@ -101,6 +105,9 @@ class MissionService:
 
     def request_approval(self, step_id: str, requested_by: str) -> Approval:
         step = self.repository.get_step(step_id)
+        current = self.repository.get_approval_for_step(step_id)
+        if current is not None and current.status == ApprovalStatus.PENDING:
+            return current
         approval = Approval(str(uuid4()), step.mission_id, step.step_id, ApprovalStatus.PENDING, requested_by)
         self.repository.save_approval(approval)
         if step.status != StepStatus.WAITING_HUMAN:
@@ -114,15 +121,19 @@ class MissionService:
 
     def decide_approval(self, step_id: str, approved: bool, decided_by: str, reason: str = "") -> Approval:
         current = self.repository.get_approval_for_step(step_id)
-        if current is None or current.status != ApprovalStatus.PENDING:
+        if current is None:
             raise MissionValidationError("Não existe aprovação pendente para a etapa")
-        status = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
-        decision = replace(current, status=status, decided_by=decided_by, reason=reason, decided_at=utc_now())
+        desired = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
+        if current.status == desired:
+            return current
+        if current.status != ApprovalStatus.PENDING:
+            raise MissionValidationError("A aprovação já recebeu uma decisão diferente")
+        decision = replace(current, status=desired, decided_by=decided_by, reason=reason, decided_at=utc_now())
         self.repository.save_approval(decision)
         step = self.repository.get_step(step_id)
         target = StepStatus.PENDING if approved else StepStatus.BLOCKED
         validate_step_transition(step.status, target)
-        updated = replace(step, status=target, approval_status=status)
+        updated = replace(step, status=target, approval_status=desired)
         self.repository.update_step(updated, step.version)
         mission = self.repository.get_mission(step.mission_id)
         if approved and mission.status == MissionStatus.WAITING_HUMAN:
@@ -174,6 +185,8 @@ class MissionService:
 
     def emergency_stop(self, mission_id: str, actor: str, reason: str) -> Mission:
         mission = self.repository.get_mission(mission_id)
+        if mission.emergency_stopped:
+            return mission
         stopped = self.repository.update_mission(replace(mission, emergency_stopped=True), mission.version)
         for step in self.repository.list_steps(mission_id):
             if step.status in {StepStatus.PENDING, StepStatus.RUNNING, StepStatus.WAITING_HUMAN, StepStatus.BLOCKED}:
