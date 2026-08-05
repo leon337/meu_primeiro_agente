@@ -129,12 +129,14 @@ class MCFAdapter:
             "status": mission.status.value,
             "return_to": mission.return_to,
             "objective": mission.objective,
+            "owner_authorized": mission.metadata.get("owner_authorized") is True,
             "steps": [
                 {
                     "step_id": step.step_id,
                     "sequence": step.sequence,
                     "status": step.status.value,
                     "evidence_count": len(step.evidence),
+                    "evidence": list(step.evidence[-3:]),
                     "error": step.sanitized_error,
                 }
                 for step in steps
