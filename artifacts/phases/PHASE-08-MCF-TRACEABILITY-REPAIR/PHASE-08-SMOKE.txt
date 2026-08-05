@@ -1,0 +1,34 @@
+PHASE-08 SMOKE TEST
+
+objective=confirmar fluxo mínimo MCF -> runtime local -> execução controlada -> evidência -> parada
+subject_commit=3e4dfd5f9a770968d3a675bfde1e4a4a71b3b369
+
+STEP_1=compile_and_test
+RESULT_1=PASS
+
+STEP_2=create_and_run_dry_run_mission
+EXPECTED_2=mission_COMPLETED_and_one_step_completed
+OBSERVED_2=mission_COMPLETED_and_one_step_completed
+RESULT_2=PASS
+
+STEP_3=verify_persistence_event_chain_receipt_idempotency
+EXPECTED_3=all_true
+OBSERVED_3=all_true
+RESULT_3=PASS
+
+STEP_4=validate_emergency_stop
+EXPECTED_4=test_mission_CANCELLED
+OBSERVED_4=test_mission_CANCELLED
+RESULT_4=PASS
+
+STEP_5=run_real_read_only_playwright
+EXPECTED_5=two_operations_and_text_verified
+OBSERVED_5=completed_2_mode_real_read_only_text_verified_true
+RESULT_5=PASS
+
+DESTRUCTIVE_ACTIONS=NONE
+SYSTEMD_INSTALLATION=NOT_EXECUTED
+MERGE=NOT_EXECUTED
+PRODUCTION_DEPLOY=NOT_EXECUTED
+
+SMOKE_RESULT=PASS
