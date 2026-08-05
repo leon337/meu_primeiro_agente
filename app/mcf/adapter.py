@@ -23,6 +23,7 @@ class MCFTaskRequest:
     completion_criteria: tuple[str, ...]
     max_autonomy: int = 1
     owner_authorized: bool = False
+    demo_only: bool = False
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "MCFTaskRequest":
@@ -44,6 +45,7 @@ class MCFTaskRequest:
             completion_criteria=tuple(str(item) for item in payload["completion_criteria"]),
             max_autonomy=int(payload.get("max_autonomy", 1)),
             owner_authorized=bool(payload.get("owner_authorized", False)),
+            demo_only=bool(payload.get("demo_only", False)),
         )
 
 
@@ -68,6 +70,7 @@ class MCFAdapter:
                 "source": "MCF",
                 "contract_version": 2,
                 "owner_authorized": request.owner_authorized,
+                "demo_only": request.demo_only,
             },
         )
 
@@ -130,6 +133,7 @@ class MCFAdapter:
             "return_to": mission.return_to,
             "objective": mission.objective,
             "owner_authorized": mission.metadata.get("owner_authorized") is True,
+            "demo_only": mission.metadata.get("demo_only") is True,
             "steps": [
                 {
                     "step_id": step.step_id,

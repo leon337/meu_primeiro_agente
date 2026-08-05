@@ -1,0 +1,65 @@
+phase: PHASE-10-AEP-UNIVERSAL-APP-DEMO
+status: LOCAL_GATE_PASS_SECRET_ROTATION_REQUIRED
+objective:
+  universal_registered_app_access: true
+  financial_demo_mode: true
+source_branch: feat/aep-universal-app-demo-mode
+base_head: d9fb6db3dae00f5eb00b384d3bb92b91a7b537cb
+validated_head: 2c909ce81a0c41a5b1886c60450bc0181b2d727f
+pull_request: 13
+controls:
+  arbitrary_shell: false
+  credentials_in_chat: false
+  real_financial_effect: false
+  real_order: false
+  deposit: false
+  withdrawal: false
+  human_confirmation_for_demo_financial_action: true
+features:
+  list_registered_applications: true
+  launch_registered_application: true
+  focus_registered_application: true
+  at_spi_named_controls: true
+  wmctrl_focus_fallback: true
+  xdotool_focus_fallback: true
+  allow_all_registered_apps_flag: AEP_DESKTOP_ALLOW_ALL_APPS
+  demo_contract_flag: demo_only
+remote_gates:
+  aep_ci:
+    run_id: 31052710890
+    python_3_11: PASS
+    python_3_12: PASS
+    conclusion: success
+  vercel_preview:
+    status: PASS
+local_gate:
+  result: PASS
+  bridge_service: active
+  executive_service: active
+  registered_application_count: 159
+  applications:
+    - query: Brave
+      resolved_name: Hello Agent
+      desktop_id: brave-kibgpaeblmfaafcaodnokdkfblbamglo-Default
+      launched: true
+      focused: true
+    - query: Visual Studio Code
+      resolved_name: Visual Studio Code
+      desktop_id: code
+      launched: true
+      focused: true
+  demo_policy:
+    configured: true
+    allowed: true
+    requires_approval: true
+    decision_code: FINANCIAL_DEMO_CONFIRMATION
+    real_effect_blocked: true
+    real_effect_code: REAL_FINANCIAL_EFFECT_BLOCKED
+evidence:
+  - PHASE-10-LOCAL-GATE-EVIDENCE.md
+pending:
+  - rotate previously exposed secrets
+  - final independent audit after secret rotation
+  - Léo operational gate
+  - explicit human merge authorization
+merge_authorized: false

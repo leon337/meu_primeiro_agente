@@ -38,6 +38,7 @@ class MissionCreateRequest(BaseModel):
     completion_criteria: list[str] = Field(min_length=1, max_length=30)
     max_autonomy: int = Field(default=1, ge=1, le=5)
     owner_authorized: bool = False
+    demo_only: bool = False
 
 
 class StepCreateRequest(BaseModel):

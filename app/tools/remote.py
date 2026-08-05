@@ -35,14 +35,15 @@ def executive_tool_definitions() -> list[ToolDefinition]:
                 "description": (
                     "Ação declarativa. Navegador: navigate, read_text, click, fill, "
                     "fill_credential, select, screenshot, download ou submit. Desktop: "
-                    "focus_application, click_named_control, set_named_text ou read_named_text."
+                    "list_applications, launch_application, focus_application, click_named_control, "
+                    "set_named_text ou read_named_text."
                 ),
             },
             "capability": {
                 "type": "string",
                 "description": (
                     "Classe de capacidade: observe, prepare, execute_reversible, communicate, "
-                    "publish, install ou delete."
+                    "publish, install, delete ou financial. Use financial somente em missão demo_only."
                 ),
             },
             "target": {
@@ -53,7 +54,8 @@ def executive_tool_definitions() -> list[ToolDefinition]:
                 "type": "object",
                 "description": (
                     "Parâmetros da ação. Use channel=browser com selector/value/credential_ref/options; "
-                    "ou channel=desktop com application/control_name/value."
+                    "ou channel=desktop com application/control_name/value. Para teste financeiro, "
+                    "declare demo_only=true e nunca envie credenciais."
                 ),
                 "additionalProperties": True,
             },
@@ -92,6 +94,13 @@ def executive_tool_definitions() -> list[ToolDefinition]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Ações declarativas que esta missão não poderá executar.",
+                    },
+                    "demo_only": {
+                        "type": "boolean",
+                        "description": (
+                            "Marque true somente para testes demonstrativos sem dinheiro, depósito, saque, "
+                            "transferência ou ordem real."
+                        ),
                     },
                     "max_autonomy": {
                         "type": "integer",
@@ -270,6 +279,7 @@ class RemoteToolRegistry:
                 "allowed_domains",
                 "completion_criteria",
                 "forbidden_actions",
+                "demo_only",
                 "max_autonomy",
                 "wait_seconds",
             },
@@ -321,6 +331,9 @@ class RemoteToolRegistry:
         forbidden = arguments.get("forbidden_actions", [])
         if not isinstance(forbidden, list):
             raise ToolError("forbidden_actions deve ser uma lista")
+        demo_only = arguments.get("demo_only", False)
+        if not isinstance(demo_only, bool):
+            raise ToolError("demo_only deve ser booleano")
         max_autonomy = arguments.get("max_autonomy", 4)
         if not isinstance(max_autonomy, int) or not 1 <= max_autonomy <= 5:
             raise ToolError("max_autonomy deve estar entre 1 e 5")
@@ -341,6 +354,7 @@ class RemoteToolRegistry:
                 "completion_criteria": [str(item) for item in criteria],
                 "max_autonomy": max_autonomy,
                 "owner_authorized": True,
+                "demo_only": demo_only,
             }
         )
         planning = self._mission_client.transition(mission_id, "PLANNING", created.get("version"))
@@ -351,6 +365,7 @@ class RemoteToolRegistry:
             "status": ready.get("status", "READY"),
             "version": ready.get("version"),
             "planned_steps": planned_steps,
+            "demo_only": demo_only,
             "message": "Missão enviada ao runtime local para execução e auditoria.",
         }
         if wait_seconds == 0:

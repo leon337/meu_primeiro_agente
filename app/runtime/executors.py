@@ -1,4 +1,4 @@
-"""Roteamento seguro entre navegador e desktop."""
+"""Roteamento controlado entre navegador e aplicativos do desktop."""
 
 from __future__ import annotations
 
@@ -65,9 +65,14 @@ class ExecutiveActionExecutor:
         allowed_apps = tuple(
             item.strip() for item in os.getenv("AEP_DESKTOP_APPS", "").split(",") if item.strip()
         )
+        allow_all = os.getenv("AEP_DESKTOP_ALLOW_ALL_APPS", "0") == "1"
         real = os.getenv("AEP_DESKTOP_REAL", "0") == "1"
         backend = AtSpiDesktopBackend() if real else DryRunDesktopBackend()
-        executor = SafeDesktopExecutor(allowed_apps, backend)
+        executor = SafeDesktopExecutor(
+            allowed_apps,
+            backend,
+            allow_all_applications=allow_all,
+        )
         operation = DesktopOperation(step.action)
         action = DesktopAction(
             application=str(step.parameters.get("application", "")),
