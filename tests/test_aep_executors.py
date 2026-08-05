@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 
+from app.browser.adapter import BrowserStepAdapter
 from app.browser.executor import BrowserExecutionError, PlaywrightBrowserExecutor
 from app.browser.models import BrowserAction, BrowserOperation
 from app.desktop.executor import DesktopAction, DesktopExecutionError, DesktopOperation, SafeDesktopExecutor
+from app.missions.models import Mission, MissionStep
 from app.voice.commands import VoiceIntent, parse_voice_command
 
 
@@ -17,6 +19,26 @@ def test_browser_dry_run_respects_allowlist_and_hides_values(tmp_path: Path) -> 
     assert result["mode"] == "dry_run"
     assert result["actions"][1]["value_present"] is True
     assert "valor privado" not in str(result)
+
+
+def test_browser_step_navigates_and_acts_atomically(tmp_path: Path) -> None:
+    executor = PlaywrightBrowserExecutor(("example.com",), output_directory=tmp_path, dry_run=True)
+    adapter = BrowserStepAdapter(executor)
+    mission = Mission("MCF-WEB-1", "Mestre", "Ler título", "Mestre", allowed_domains=("example.com",))
+    step = MissionStep(
+        "STEP-1",
+        mission.mission_id,
+        1,
+        BrowserOperation.READ_TEXT.value,
+        "observe",
+        target="https://example.com/",
+        parameters={"selector": "h1"},
+    )
+    result = adapter(mission, step)
+    assert result["completed"] == 2
+    assert [item["operation"] for item in result["actions"]] == ["navigate", "read_text"]
+    with pytest.raises(ValueError, match="URL de destino"):
+        adapter(mission, MissionStep("STEP-2", mission.mission_id, 2, "read_text", "observe", parameters={"selector": "h1"}))
 
 
 def test_browser_blocks_domain_plain_http_and_unapproved_submit(tmp_path: Path) -> None:
