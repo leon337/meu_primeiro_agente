@@ -68,7 +68,11 @@ def test_whatsapp_signature_and_message_parsing() -> None:
 def test_pwa_home_is_available() -> None:
     response = home()
     assert Path(response.path).name == "index.html"
-    assert "Hello Agent" in Path(response.path).read_text(encoding="utf-8")
+    html = Path(response.path).read_text(encoding="utf-8")
+    assert "Agente Executivo Pessoal" in html
+    assert 'lang="pt-BR"' in html
+    assert 'id="micButton"' in html
+    assert 'id="emergencyStopButton"' in html
 
 
 def test_public_compliance_pages_are_available_without_filesystem() -> None:
