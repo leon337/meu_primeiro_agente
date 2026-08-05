@@ -53,6 +53,17 @@ def test_provider_builds_unique_stable_model_chain() -> None:
     ]
 
 
+def test_request_timeout_is_never_below_gemini_minimum() -> None:
+    provider = GeminiProvider(
+        api_key="fake-key",
+        model_name="gemini-3.6-flash",
+        tools=[],
+        request_timeout_ms=8_000,
+    )
+
+    assert provider._request_timeout_ms == 10_500  # type: ignore[attr-defined]
+
+
 def test_tool_policy_requires_explicit_local_request() -> None:
     provider = GeminiProvider(
         api_key="fake-key",

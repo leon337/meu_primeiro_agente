@@ -16,6 +16,7 @@ class GeminiProvider(AIProvider):
 
     _cooldown_lock = Lock()
     _cooldown_until: dict[str, float] = {}
+    _minimum_timeout_ms = 10_500
     _stable_fallbacks = (
         "gemini-3.1-flash-lite",
         "gemini-2.5-flash-lite",
@@ -27,7 +28,7 @@ class GeminiProvider(AIProvider):
         model_name: str,
         tools: list[ToolDefinition],
         fallback_model_name: str | None = None,
-        request_timeout_ms: int = 8_000,
+        request_timeout_ms: int = 12_000,
         cooldown_seconds: float = 60.0,
     ) -> None:
         retry_options = types.HttpRetryOptions(
@@ -38,10 +39,11 @@ class GeminiProvider(AIProvider):
             jitter=0.5,
             http_status_codes=[408, 429, 500, 502, 503, 504],
         )
+        self._request_timeout_ms = max(request_timeout_ms, self._minimum_timeout_ms)
         self._client = genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(
-                timeout=request_timeout_ms,
+                timeout=self._request_timeout_ms,
                 retry_options=retry_options,
             ),
         )

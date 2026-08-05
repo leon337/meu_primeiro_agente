@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Hello Agent", version="2.1.2")
+app = FastAPI(title="Hello Agent", version="2.1.3")
 _WHATSAPP_DEDUPLICATOR = MessageDeduplicator()
 _TEMPORARY_WHATSAPP_REPLY = (
     "Estou com alta demanda no serviço de IA neste momento. "
