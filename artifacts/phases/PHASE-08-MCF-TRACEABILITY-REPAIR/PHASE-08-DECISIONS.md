@@ -69,9 +69,58 @@ Nenhuma ação será atribuída a agente sem um dos seguintes elementos verific�
 - decisão formal registrada;
 - handoff com checkpoint.
 
-## D-008 — Estado pretendido da fase
+## D-008 — Auditoria ciclo 1
 
-**Responsável:** Carmem  
-**Estado:** AGUARDANDO AUDITORIA E GATE
+**Responsável:** Emily  
+**Estado:** RETURN_FOR_CLOSURE
 
-A fase poderá ser encerrada como `ENTREGUE` somente após auditoria de Emily, gate de Léo, checkpoint e manifesto de integridade.
+A fase foi devolvida por ausência de checkpoint, manifesto e gate.
+
+## D-009 — Auditoria ciclo 2
+
+**Responsável:** Emily  
+**Estado:** PASS_WITH_FINALIZATION
+
+Após criação do checkpoint, o conteúdo substantivo foi aprovado, restando apenas finalização documental.
+
+## D-010 — Gate operacional inicial
+
+**Responsável:** Léo  
+**Estado:** APPROVED_WITH_FINALIZATION
+
+Autorizar somente fechamento documental reversível, preservando proibição de merge, systemd e deploy.
+
+## D-011 — Validação do head documental
+
+**Responsável:** Renato  
+**Estado:** PASS_COM_ACHADO_CORRIGIVEL
+
+Os workflows do head documental passaram, mas `mission-trace.md`, relatório e decisões ainda registravam estado intermediário.
+
+## D-012 — Recuperação CAF documental
+
+**Responsáveis:** Augusto e Carmem  
+**Estado:** EXECUTADA
+
+Atualizar trace, relatório e decisões; regenerar manifesto depois das versões finais.
+
+## D-013 — Auditoria final
+
+**Responsável:** Emily  
+**Estado:** PASS
+
+Os critérios ESEV e PRF foram atendidos e não existem achados abertos.
+
+## D-014 — Gate final
+
+**Responsável:** Léo  
+**Estado:** APPROVED
+
+A fase está aprovada como correção metodológica concluída. O gate não autoriza merge, systemd ou produção.
+
+## D-015 — Estado final
+
+**Responsável:** Mestre  
+**Estado:** ENTREGUE
+
+O PRF está completo, o manifesto final foi regenerado e nenhuma ação executável permanece dentro desta fase.
