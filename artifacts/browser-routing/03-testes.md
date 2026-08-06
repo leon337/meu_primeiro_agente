@@ -81,6 +81,6 @@ Ambas terminaram com código zero e sem saída de erro.
 | health em registro legado | passa; não anuncia capacidade inexistente |
 | recibo no formato real | passa; devolve `Example Domain` |
 
-## Limite pendente
+## Gate de Preview posterior à suíte
 
-O gate automatizado de Preview e o envio controlado pelo endpoint implantado ainda dependem da publicação da branch. Não foram simulados como se fossem produção.
+Depois da publicação da branch, o Preview protegido passou no health, na pergunta de capacidade, na missão Web real para `example.com` e na pergunta conceitual. O teste WhatsApp real no Preview permanece pendente e não foi tratado como aprovado pela cobertura automatizada.

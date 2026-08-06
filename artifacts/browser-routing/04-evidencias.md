@@ -48,6 +48,10 @@ Não foi possível repetir o gate externo após essas duas correções porque o 
 
 Após a publicação da branch, a Vercel criou o Preview do commit `ca4ae69`. A implantação e os checks do GitHub concluíram com sucesso.
 
+URL pública protegida do Preview:
+
+`https://meu-primeiro-agente-git-fix-aep-browser-rou-958ea7-predix-ai-br.vercel.app`
+
 O Preview protegido foi acessado pelo fluxo autenticado da própria Vercel, sem desabilitar Deployment Protection:
 
 - `GET /api/health`: HTTP 200, `status: ok`, `bridge_connected: true`, `executive_available: true` e `whatsapp_configured: true`;
@@ -56,6 +60,8 @@ O Preview protegido foi acessado pelo fluxo autenticado da própria Vercel, sem 
 - pergunta conceitual sobre inteligência artificial: resposta explicativa normal, sem ID ou linguagem de missão.
 
 O webhook real da Meta não foi silenciosamente transferido para o Preview. Portanto, o teste de uma mensagem WhatsApp real nessa implantação continua sendo um gate explícito anterior ao merge.
+
+Após a missão, a inspeção de processos encontrou 10 processos Chromium associados ao perfil persistente `var/aep/browser-profile`, além do driver Playwright ativo. A sessão do navegador não foi fechada ao término da missão.
 
 ## Segredos e privacidade
 
