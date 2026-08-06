@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import atexit
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Protocol
+from threading import RLock
+from typing import Any, Protocol
 from urllib.parse import urlsplit
 
 from app.browser.models import BrowserAction, BrowserOperation
@@ -48,6 +50,7 @@ class PlaywrightBrowserExecutor:
         output_directory: str | Path = "var/aep",
         dry_run: bool = True,
         headless: bool = False,
+        keep_open: bool = False,
     ) -> None:
         self.allowed_domains = tuple(item.lower().strip(".") for item in allowed_domains if item.strip("."))
         self.credential_broker = credential_broker or NullCredentialBroker()
@@ -55,6 +58,13 @@ class PlaywrightBrowserExecutor:
         self.output_directory = Path(output_directory).expanduser().resolve()
         self.dry_run = dry_run
         self.headless = headless
+        self.keep_open = keep_open
+        self._session_lock = RLock()
+        self._playwright_manager: Any | None = None
+        self._context: Any | None = None
+        self._browser: Any | None = None
+        self._page: Any | None = None
+        self._atexit_registered = False
 
     def execute(self, actions: list[BrowserAction], approval_granted: bool = False) -> dict[str, object]:
         self._validate(actions, approval_granted)
@@ -64,7 +74,36 @@ class PlaywrightBrowserExecutor:
                 "actions": [self._public_action(action) for action in actions],
                 "completed": len(actions),
             }
-        return self._execute_real(actions)
+        if self.keep_open:
+            return self._execute_persistent(actions)
+        return self._execute_temporary(actions)
+
+    def close(self) -> None:
+        """Encerra a sessão persistente, normalmente durante a parada do daemon."""
+
+        with self._session_lock:
+            context = self._context
+            browser = self._browser
+            manager = self._playwright_manager
+            self._page = None
+            self._context = None
+            self._browser = None
+            self._playwright_manager = None
+            if context is not None:
+                try:
+                    context.close()
+                except Exception:
+                    pass
+            if browser is not None:
+                try:
+                    browser.close()
+                except Exception:
+                    pass
+            if manager is not None:
+                try:
+                    manager.stop()
+                except Exception:
+                    pass
 
     def _validate(self, actions: list[BrowserAction], approval_granted: bool) -> None:
         if not actions:
@@ -122,14 +161,18 @@ class PlaywrightBrowserExecutor:
             "credential_reference": action.credential_ref or None,
         }
 
-    def _execute_real(self, actions: list[BrowserAction]) -> dict[str, object]:
+    @staticmethod
+    def _load_sync_playwright():
         try:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:
             raise BrowserExecutionError(
                 "Playwright não instalado. Use requirements-executive.txt e execute playwright install chromium."
             ) from exc
+        return sync_playwright
 
+    def _execute_temporary(self, actions: list[BrowserAction]) -> dict[str, object]:
+        sync_playwright = self._load_sync_playwright()
         outputs: list[dict[str, object]] = []
         with sync_playwright() as playwright:
             launch_args = {"headless": self.headless}
@@ -149,6 +192,53 @@ class PlaywrightBrowserExecutor:
                 if browser is not None:
                     browser.close()
         return {"mode": "real", "completed": len(outputs), "outputs": outputs}
+
+    def _execute_persistent(self, actions: list[BrowserAction]) -> dict[str, object]:
+        with self._session_lock:
+            page = self._ensure_persistent_page()
+            outputs = [self._execute_action(page, action) for action in actions]
+            return {
+                "mode": "real",
+                "session": "persistent",
+                "completed": len(outputs),
+                "outputs": outputs,
+            }
+
+    def _ensure_persistent_page(self):  # type: ignore[no-untyped-def]
+        if self._page is not None and not self._page.is_closed():
+            return self._page
+
+        self.close()
+        sync_playwright = self._load_sync_playwright()
+        manager = sync_playwright().start()
+        launch_args = {"headless": self.headless}
+        try:
+            if self.profile_directory:
+                self.profile_directory.mkdir(parents=True, exist_ok=True)
+                context = manager.chromium.launch_persistent_context(
+                    str(self.profile_directory),
+                    **launch_args,
+                )
+                browser = None
+            else:
+                browser = manager.chromium.launch(**launch_args)
+                context = browser.new_context()
+            page = context.pages[0] if context.pages else context.new_page()
+        except Exception:
+            try:
+                manager.stop()
+            except Exception:
+                pass
+            raise
+
+        self._playwright_manager = manager
+        self._browser = browser
+        self._context = context
+        self._page = page
+        if not self._atexit_registered:
+            atexit.register(self.close)
+            self._atexit_registered = True
+        return page
 
     def _execute_action(self, page, action: BrowserAction) -> dict[str, object]:  # type: ignore[no-untyped-def]
         operation = action.operation

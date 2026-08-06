@@ -22,6 +22,8 @@ class MCFTaskRequest:
     forbidden_actions: tuple[str, ...]
     completion_criteria: tuple[str, ...]
     max_autonomy: int = 1
+    owner_authorized: bool = False
+    demo_only: bool = False
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "MCFTaskRequest":
@@ -42,6 +44,8 @@ class MCFTaskRequest:
             forbidden_actions=tuple(str(item) for item in payload.get("forbidden_actions", ())),
             completion_criteria=tuple(str(item) for item in payload["completion_criteria"]),
             max_autonomy=int(payload.get("max_autonomy", 1)),
+            owner_authorized=bool(payload.get("owner_authorized", False)),
+            demo_only=bool(payload.get("demo_only", False)),
         )
 
 
@@ -62,7 +66,12 @@ class MCFAdapter:
             forbidden_actions=request.forbidden_actions,
             completion_criteria=request.completion_criteria,
             max_autonomy=AutonomyLevel(request.max_autonomy),
-            metadata={"source": "MCF", "contract_version": 1},
+            metadata={
+                "source": "MCF",
+                "contract_version": 2,
+                "owner_authorized": request.owner_authorized,
+                "demo_only": request.demo_only,
+            },
         )
 
     def accept(self, request: MCFTaskRequest) -> Mission:
@@ -123,12 +132,15 @@ class MCFAdapter:
             "status": mission.status.value,
             "return_to": mission.return_to,
             "objective": mission.objective,
+            "owner_authorized": mission.metadata.get("owner_authorized") is True,
+            "demo_only": mission.metadata.get("demo_only") is True,
             "steps": [
                 {
                     "step_id": step.step_id,
                     "sequence": step.sequence,
                     "status": step.status.value,
                     "evidence_count": len(step.evidence),
+                    "evidence": list(step.evidence[-3:]),
                     "error": step.sanitized_error,
                 }
                 for step in steps

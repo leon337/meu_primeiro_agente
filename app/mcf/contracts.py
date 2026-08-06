@@ -16,6 +16,7 @@ MCF_TASK_SCHEMA = {
         "forbidden_actions": {"type": "array", "items": {"type": "string"}},
         "completion_criteria": {"type": "array", "items": {"type": "string"}, "minItems": 1},
         "max_autonomy": {"type": "integer", "minimum": 1, "maximum": 5},
+        "owner_authorized": {"type": "boolean"},
     },
     "additionalProperties": False,
 }

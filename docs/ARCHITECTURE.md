@@ -8,6 +8,10 @@ O projeto separa conversa, provedor de IA e execução de ferramentas. O modelo 
 flowchart LR
     U[Usuário no navegador/PWA] -->|HTTPS + APP_ACCESS_TOKEN| V[FastAPI na Vercel]
     W[WhatsApp Cloud API] -->|Webhook assinado| V
+    V --> I{Roteador determinístico}
+    I -->|pergunta conceitual| G
+    I -->|ação explícita| M[API de missões]
+    M --> T
     V -->|generate_content| G[Gemini]
     G -->|function call declarada| V
     V -->|HTTPS + BRIDGE_DEVICE_TOKEN| T[Tailscale Funnel]
@@ -27,6 +31,7 @@ flowchart LR
 | `app/providers/base.py` | Contrato independente de provedor |
 | `app/providers/gemini_provider.py` | Adaptação para `google-genai`, histórico, function calling e fallback 429/503 |
 | `app/chat_service.py` | Até 100 sessões LRU em memória, uma instância de agente por sessão |
+| `app/browser_routing.py` | Classificação estreita de capacidade, ação explícita e pesquisa de navegador |
 | `app/server.py` | PWA, API, autenticação do app, health check e webhook WhatsApp |
 | `app/bridge.py` | API local autenticada que expõe somente ferramentas aprovadas |
 | `app/tools/registry.py` | Lista fechada, esquema de parâmetros, despacho e auditoria |
@@ -40,9 +45,22 @@ flowchart LR
 2. O usuário informa `APP_ACCESS_TOKEN` nas configurações; ele permanece no dispositivo.
 3. A PWA envia `POST /api/chat` com JSON e `Authorization: Bearer ...`.
 4. `server.py` valida o token e obtém a sessão no `ChatService`.
-5. `GeminiProvider` envia histórico, instrução de sistema e declarações de ferramentas ao Gemini.
-6. Se o Gemini responder com texto, esse texto volta à PWA.
-7. Se solicitar ferramenta, o `Agent` executa o ciclo descrito abaixo.
+5. `ChatService` classifica primeiro somente intenções inequívocas de navegador.
+6. Perguntas conceituais continuam no `GeminiProvider`; ações explícitas seguem para uma missão auditável.
+7. Se o Gemini responder com texto, esse texto volta à PWA.
+8. Se solicitar ferramenta, o `Agent` executa o ciclo descrito abaixo.
+
+## Roteamento executivo de navegador
+
+O roteamento de `app/browser_routing.py` não depende da interpretação probabilística do modelo:
+
+1. “Você consegue acessar sites?” responde com base na presença real de `aep_submit_mission` no registro.
+2. “Abra o Google”, uma URL HTTPS explícita ou uma pesquisa inequívoca cria uma missão com etapas declarativas.
+3. A missão atravessa a ponte, é persistida e executada pelo daemon local.
+4. O canal recebe `mission_id`, estado e texto público extraído do recibo quando disponível.
+5. Mensagens conceituais e ambíguas continuam no fluxo normal da IA sem abrir navegador.
+
+Web e WhatsApp compartilham o mesmo `ChatService`, portanto a classificação e as respostas de disponibilidade são idênticas nos dois canais. Eventos operacionais registram apenas canal, referência de sessão em hash, rota, disponibilidade e `mission_id`.
 
 ## Fluxo de uma ferramenta local
 
@@ -69,6 +87,8 @@ Exemplo: “Qual é meu espaço em disco?”
 | `list_files` | caminho, nomes, tipos e tamanhos | Não lê conteúdo e não segue links |
 
 Não existem ferramentas para shell, comandos, leitura de arquivo, upload, escrita, exclusão, câmera, microfone ou controle da tela.
+
+O runtime executivo possui operações declarativas e limitadas de navegador/desktop. Isso não altera o `ToolRegistry` diagnóstico: não há shell genérico, coordenadas livres nem acesso arbitrário a arquivos. Cada missão declara domínio, capacidade, critérios e ações proibidas.
 
 ## Escolha do executor
 

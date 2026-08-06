@@ -18,6 +18,8 @@ Assistente em Python conectado ao Gemini, disponível no terminal, como API web,
 
 O `Agent` coordena a conversa sem conhecer o Gemini. `AIProvider` define o contrato substituível do provedor. `GeminiProvider` converte esse contrato para o SDK oficial. `ToolRegistry` funciona como lista fechada: nomes ou parâmetros não previstos são recusados.
 
+Pedidos inequívocos como “Abra o Google” ou “Acesse `https://example.com` e leia o título” passam antes por um roteador determinístico. Quando o runtime executivo está realmente disponível, eles criam uma missão persistida e auditável; perguntas conceituais continuam no Gemini. Web e WhatsApp usam exatamente a mesma regra.
+
 Não há execução de shell, leitura de conteúdo, escrita, exclusão nem envio de arquivos. `list_files` aceita somente caminhos relativos dentro de `ALLOWED_DIRECTORY`, bloqueia `..` e retorna apenas nome, tipo e tamanho. Cada execução autorizada é impressa com horário, nome e parâmetros.
 
 ## Preparação
@@ -152,6 +154,7 @@ Os arquivos em `systemd/` iniciam a ponte e o Tailscale no login, sem depender d
 ```bash
 systemctl --user status hello-agent-bridge.service
 systemctl --user status hello-agent-tailscaled.service
+systemctl --user status hello-agent-executive.service
 journalctl --user -u hello-agent-tailscaled.service -f
 ```
 

@@ -22,7 +22,7 @@ A PWA foi publicada na Vercel. `APP_ACCESS_TOKEN` protege os endpoints de conver
 
 ## 4. Preparação do WhatsApp
 
-Foram implementados handshake, validação HMAC, extração de mensagens de texto e envio pela Graph API. A implementação existe, mas a configuração da conta Meta e o teste real permanecem pendentes.
+Foram implementados handshake, validação HMAC, extração de mensagens de texto e envio pela Graph API. A integração foi configurada e validada com uma consulta real ao computador.
 
 ## 5. Primeiro erro da nuvem
 
@@ -73,3 +73,19 @@ O desenho atual privilegia entendimento e segurança didática, não escala:
 - quatro ferramentas somente leitura.
 
 As próximas evoluções devem preservar essas fronteiras até que autenticação individual, persistência e auditoria estejam prontas.
+
+## 11. Roteamento determinístico antes do modelo
+
+O runtime executivo já existia, mas deixar toda decisão de navegação a cargo do modelo produziu respostas contraditórias: uma pergunta de capacidade podia negar acesso mesmo com a ferramenta disponível, e um comando explícito podia não virar missão.
+
+Foi escolhido um classificador pequeno e determinístico antes do Gemini. Ele reconhece somente:
+
+- pergunta inequívoca sobre capacidade Web;
+- comando explícito para Google, Brave ou URL HTTPS;
+- pedido explícito de pesquisa no Google ou Wikipédia.
+
+O restante continua no provedor de IA. A disponibilidade é derivada da ferramenta `aep_submit_mission`, não apenas de variáveis ou do health da ponte. A decisão reduz falsos positivos sem criar um interpretador amplo de comandos.
+
+## 12. Evidência real define o contrato
+
+O teste com a ponte real mostrou que o texto do navegador aparece em `data.outputs[]`, estrutura mais profunda que a usada pelos primeiros mocks. O contrato de teste passou a reproduzir o recibo real, e a resposta ao usuário extrai somente campos de texto públicos. Tokens, cabeçalhos e erros remotos não entram na resposta nem nos logs de roteamento.
