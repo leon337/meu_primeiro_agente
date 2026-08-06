@@ -2,14 +2,21 @@
 
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from hashlib import sha256
+import json
+import logging
 from pathlib import Path
 from threading import RLock
 from typing import Callable
 
 from app.agent import Agent
+from app.browser_routing import BrowserRoute, route_browser_intent
 from app.providers.gemini_provider import GeminiProvider
 from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -72,8 +79,120 @@ class ChatService:
             if state.active_requests == 0:
                 self._sessions.pop(candidate_id, None)
 
+    def _executive_available(self) -> bool:
+        return any(definition.name == "aep_submit_mission" for definition in self._registry.definitions)
+
+    @staticmethod
+    def _channel(session_id: str) -> str:
+        return session_id.split(":", 1)[0] if ":" in session_id else "web"
+
+    @staticmethod
+    def _session_reference(session_id: str) -> str:
+        return sha256(session_id.encode("utf-8")).hexdigest()[:12]
+
+    def _log_route(self, session_id: str, route: str, available: bool, mission_id: str = "") -> None:
+        logger.info(
+            "chat_route %s",
+            json.dumps(
+                {
+                    "channel": self._channel(session_id),
+                    "session_ref": self._session_reference(session_id),
+                    "route": route,
+                    "executive_available": available,
+                    "mission_id": mission_id,
+                },
+                ensure_ascii=True,
+                sort_keys=True,
+            ),
+        )
+
+    @staticmethod
+    def _evidence_text(result: dict[str, object]) -> str:
+        receipt = result.get("receipt")
+        if not isinstance(receipt, dict):
+            return ""
+        payload = receipt.get("payload")
+        if not isinstance(payload, dict):
+            return ""
+        steps = payload.get("steps")
+        if not isinstance(steps, list):
+            return ""
+        texts: list[str] = []
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            evidence = step.get("evidence")
+            if not isinstance(evidence, list):
+                continue
+            for item in evidence:
+                if not isinstance(item, dict) or not isinstance(item.get("data"), dict):
+                    continue
+                data = item["data"]
+                value = data.get("text")
+                if isinstance(value, str) and value.strip():
+                    texts.append(value.strip())
+                outputs = data.get("outputs")
+                if not isinstance(outputs, list):
+                    continue
+                for output in outputs:
+                    if not isinstance(output, dict):
+                        continue
+                    output_text = output.get("text")
+                    if isinstance(output_text, str) and output_text.strip():
+                        texts.append(output_text.strip())
+        return "\n\n".join(texts)[-4000:]
+
+    def _handle_browser_route(self, session_id: str, route: BrowserRoute) -> str | None:
+        if route.kind == "fallback":
+            return None
+        available = self._executive_available()
+        if route.kind == "capability":
+            self._log_route(session_id, route.kind, available)
+            if available:
+                return (
+                    "Sim. Posso acessar sites pelo navegador do computador conectado, "
+                    "criando uma missão auditável quando você pedir uma ação explícita."
+                )
+            return (
+                "O recurso de navegação está indisponível nesta sessão porque o runtime executivo "
+                "do computador conectado não está disponível."
+            )
+        if not available or route.mission is None:
+            self._log_route(session_id, route.kind, available)
+            return (
+                "Não foi possível executar a navegação: o runtime executivo do computador conectado "
+                "está indisponível nesta sessão."
+            )
+        try:
+            result = self._registry.execute("aep_submit_mission", route.mission)
+        except Exception:
+            # A exceção remota pode conter detalhes do provedor. Não a registre:
+            # o evento estruturado abaixo é suficiente para operação sem risco de segredo.
+            self._log_route(session_id, "browser_action_failed", available)
+            return (
+                "Não foi possível encaminhar a ação ao runtime executivo do computador conectado. "
+                "Confirme a conexão e tente novamente."
+            )
+        mission_id = str(result.get("mission_id", "não informado"))
+        mission_status = str(result.get("status", "UNKNOWN"))
+        self._log_route(session_id, route.kind, available, mission_id)
+        reply = f"Missão {mission_id} criada. Estado: {mission_status}."
+        evidence = self._evidence_text(result)
+        if evidence:
+            reply += f"\n\nResultado verificado:\n{evidence}"
+        elif mission_status not in {"COMPLETED", "FAILED", "BLOCKED", "CANCELLED", "WAITING_HUMAN"}:
+            reply += " A execução continua no runtime local e pode ser consultada pelo identificador da missão."
+        return reply
+
     def chat(self, session_id: str, message: str) -> str:
         session_id = self._validate_session_id(session_id)
+        if not message.strip():
+            raise ValueError("A mensagem não pode estar vazia")
+        route = route_browser_intent(message)
+        routed_reply = self._handle_browser_route(session_id, route)
+        if routed_reply is not None:
+            return routed_reply
+        self._log_route(session_id, "ai_fallback", self._executive_available())
         with self._lock:
             state = self._sessions.pop(session_id, None)
             if state is None:

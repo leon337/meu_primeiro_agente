@@ -11,6 +11,7 @@ Permitir consultas limitadas ao computador sem oferecer ao modelo uma sessão de
 | Usuário → chat Vercel | `APP_ACCESS_TOKEN` Bearer |
 | Meta → webhook | HMAC SHA-256 com `WHATSAPP_APP_SECRET` |
 | Vercel → computador | HTTPS Tailscale Funnel + `BRIDGE_DEVICE_TOKEN` |
+| Vercel → missões executivas | HTTPS + `AEP_CONTROL_TOKEN` distinto |
 | Modelo → ferramenta | declarações explícitas + `ToolRegistry` fechado |
 | Ferramenta → arquivos | `ALLOWED_DIRECTORY` + caminhos relativos validados |
 
@@ -22,6 +23,9 @@ Comparações de tokens usam `secrets.compare_digest`. A ponte desabilita Swagge
 - medir memória RAM;
 - obter metadados básicos do sistema;
 - listar somente nomes, tipos e tamanhos em uma árvore autorizada.
+- criar missões declarativas de navegador para URLs HTTPS e domínios derivados;
+- ler texto renderizado como evidência da missão;
+- iniciar aplicações explicitamente permitidas pelo executor desktop.
 
 ## Capacidades deliberadamente ausentes
 
@@ -30,7 +34,7 @@ Comparações de tokens usam `secrets.compare_digest`. A ponte desabilita Swagge
 - escrever, editar, mover ou apagar arquivos;
 - enviar arquivos ao modelo;
 - instalar programas por solicitação do modelo;
-- controlar teclado, mouse ou tela;
+- usar coordenadas livres, teclado arbitrário ou controle irrestrito da tela;
 - usar câmera ou microfone;
 - navegar fora de `ALLOWED_DIRECTORY`.
 
@@ -47,6 +51,7 @@ Comparações de tokens usam `secrets.compare_digest`. A ponte desabilita Swagge
 5. **Prompt injection:** o modelo pode solicitar apenas funções declaradas, mas ainda pode ser induzido a listar metadados dentro da pasta permitida.
 6. **Sessões em memória:** não existe isolamento forte de dados em banco nem autenticação por usuário.
 7. **Disponibilidade doméstica:** queda de energia, logout, suspensão ou internet interrompem a ponte.
+8. **Conteúdo Web hostil:** texto de páginas pode conter prompt injection; o roteador não transforma texto lido em novas ações e as missões mantêm lista declarativa fechada.
 
 ## Regras para evolução
 
@@ -61,6 +66,8 @@ Novas ferramentas devem seguir estes passos:
 7. obter autorização humana específica se houver escrita, execução ou dados pessoais.
 
 Não transforme `ToolRegistry` em um executor genérico. Uma ferramenta “run_command” anularia a principal barreira de segurança do projeto.
+
+O runtime executivo também não aceita uma sequência livre gerada durante a leitura da página. Domínios, etapas, capacidades, ações proibidas e autonomia são persistidos antes da execução. `fill_credential`, `submit` e `download` permanecem proibidos nas missões criadas pelo roteador de navegador.
 
 ## Gestão de segredos
 

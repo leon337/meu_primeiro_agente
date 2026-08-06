@@ -8,7 +8,7 @@ Produção:
 curl https://meu-primeiro-agente-indol.vercel.app/api/health
 ```
 
-Resposta esperada enquanto WhatsApp não estiver configurado:
+Resposta esperada quando todos os canais e o runtime executivo estiverem configurados:
 
 ```json
 {
@@ -16,7 +16,9 @@ Resposta esperada enquanto WhatsApp não estiver configurado:
   "gemini_configured": true,
   "bridge_configured": true,
   "bridge_connected": true,
-  "whatsapp_configured": false
+  "executive_configured": true,
+  "executive_available": true,
+  "whatsapp_configured": true
 }
 ```
 
@@ -25,6 +27,7 @@ Serviços locais:
 ```bash
 systemctl --user status hello-agent-bridge.service --no-pager
 systemctl --user status hello-agent-tailscaled.service --no-pager
+systemctl --user status hello-agent-executive.service --no-pager
 ```
 
 Funnel:
@@ -40,6 +43,7 @@ Funnel:
 ```bash
 journalctl --user -u hello-agent-bridge.service -n 100 --no-pager
 journalctl --user -u hello-agent-tailscaled.service -n 100 --no-pager
+journalctl --user -u hello-agent-executive.service -n 100 --no-pager
 ```
 
 O registro da ponte mostra nome e parâmetros de cada ferramenta, mas não deve registrar tokens.
@@ -85,6 +89,19 @@ A interface atual lê a resposta como texto e tenta JSON com fallback. Se reapar
 
 Isso é esperado após cold start ou troca de instância Vercel. O histórico ainda não possui banco durável.
 
+### O agente diz que não navega, mas a ponte está conectada
+
+1. Consulte `/api/health` e diferencie `bridge_connected` de `executive_available`.
+2. Se a ponte estiver conectada e `executive_available` for `false`, confirme `AEP_CONTROL_TOKEN` no ambiente da aplicação.
+3. Confirme que o registro remoto expõe `aep_submit_mission`; presença apenas das quatro ferramentas diagnósticas não significa capacidade executiva.
+4. Confirme que a versão implantada contém `app/browser_routing.py` e o roteamento em `ChatService`.
+5. Teste “Você consegue acessar sites?” e depois “Acesse https://example.com e leia o título.”
+6. A segunda resposta só pode declarar sucesso se trouxer `mission_id` e estado real.
+
+### A missão conclui, mas o texto lido não aparece
+
+O recibo real armazena resultados em `receipt.payload.steps[].evidence[].data.outputs[]`. Rode os testes de `tests/test_browser_intent_routing.py` e confirme que o parser procura `text` nesse nível, sem registrar o recibo completo.
+
 ### O deploy tenta enviar sockets ou ferramentas locais
 
 Confirme que `.vercelignore` contém `.runtime/`, `.tools/`, `.venv/` e arquivos `.env`.
@@ -105,6 +122,7 @@ Para interromper imediatamente o acesso ao computador:
   --socket="$PWD/.runtime/tailscaled.sock" \
   funnel --https=443 off
 systemctl --user stop hello-agent-bridge.service
+systemctl --user stop hello-agent-executive.service
 ```
 
 Para impedir que voltem no próximo login:

@@ -161,9 +161,14 @@ def health() -> dict[str, object]:
     bridge_url = os.getenv("BRIDGE_URL", "").strip()
     bridge_token = os.getenv("BRIDGE_DEVICE_TOKEN", "").strip()
     bridge_connected = False
+    executive_available = False
     if bridge_url and bridge_token:
         try:
-            bridge_connected = RemoteToolRegistry(bridge_url, bridge_token).health()
+            registry = RemoteToolRegistry(bridge_url, bridge_token)
+            bridge_connected = registry.health()
+            executive_available = any(
+                definition.name == "aep_submit_mission" for definition in registry.definitions
+            )
         except ValueError:
             pass
     return {
@@ -172,7 +177,8 @@ def health() -> dict[str, object]:
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "bridge_configured": bool(bridge_url and bridge_token),
         "bridge_connected": bridge_connected,
-        "executive_configured": bool(bridge_url and os.getenv("AEP_CONTROL_TOKEN")),
+        "executive_configured": executive_available,
+        "executive_available": executive_available,
         "whatsapp_configured": all(
             os.getenv(name)
             for name in (
