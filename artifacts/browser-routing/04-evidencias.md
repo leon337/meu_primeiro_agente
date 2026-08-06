@@ -44,6 +44,19 @@ A busca real também evidenciou uma consulta com palavras extras ao usar `Wikip�
 
 Não foi possível repetir o gate externo após essas duas correções porque o ambiente de execução informou limite de uso. A restrição não foi contornada. As evidências reais anteriores provam o executor e o formato do recibo; os dois contratos corrigidos estão cobertos pela suíte local final de 88 testes.
 
+## Gate do Vercel Preview
+
+Após a publicação da branch, a Vercel criou o Preview do commit `ca4ae69`. A implantação e os checks do GitHub concluíram com sucesso.
+
+O Preview protegido foi acessado pelo fluxo autenticado da própria Vercel, sem desabilitar Deployment Protection:
+
+- `GET /api/health`: HTTP 200, `status: ok`, `bridge_connected: true`, `executive_available: true` e `whatsapp_configured: true`;
+- pergunta Web `Você consegue acessar sites?`: resposta afirmativa baseada na ferramenta disponível, sem criar missão;
+- comando Web para abrir `https://example.com`: missão `CHAT-f699477f-ad8c-416f-bcbf-f52710885079`, estado `COMPLETED`, evidência `Example Domain`.
+- pergunta conceitual sobre inteligência artificial: resposta explicativa normal, sem ID ou linguagem de missão.
+
+O webhook real da Meta não foi silenciosamente transferido para o Preview. Portanto, o teste de uma mensagem WhatsApp real nessa implantação continua sendo um gate explícito anterior ao merge.
+
 ## Segredos e privacidade
 
 - nenhum token aparece neste artefato;
@@ -54,7 +67,6 @@ Não foi possível repetir o gate externo após essas duas correções porque o 
 
 ## O que esta evidência não prova
 
-- não prova a URL de Preview antes de a branch ser publicada;
 - não prova promoção para produção;
-- não substitui o teste Web e WhatsApp da futura Preview;
+- não substitui o teste de uma mensagem WhatsApp real no Preview;
 - não autoriza merge automático.

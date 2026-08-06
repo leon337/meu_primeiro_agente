@@ -16,6 +16,10 @@ Implementação e validação local estão concluídas:
 - 88 testes passam;
 - serviços systemd validam;
 - três missões públicas reais concluíram;
+- branch publicada no commit `ca4ae69`;
+- PR `#14` aberto contra `main`;
+- Vercel Preview com checks verdes;
+- health e fluxo Web real do Preview aprovados;
 - documentação operacional atualizada;
 - nenhum merge ou promoção para produção foi feito.
 
@@ -29,19 +33,10 @@ Implementação e validação local estão concluídas:
 
 ## Próximos gates obrigatórios
 
-1. revisar `git status`, diff e arquivos a staged;
-2. executar varredura de segredos sem ler ou imprimir arquivos `.env`;
-3. commit único e push da branch;
-4. abrir PR contra `main`, sem merge;
-5. aguardar a Vercel criar Preview para o commit da branch;
-6. confirmar `/api/health` na Preview;
-7. testar no Web da Preview:
-   - `Você consegue acessar sites?`;
-   - `Acesse https://example.com e leia o título.`;
-   - `Explique o que é inteligência artificial.`;
-8. testar WhatsApp de forma controlada contra a Preview usando webhook assinado ou ambiente de teste, sem trocar silenciosamente o webhook de produção;
-9. anexar IDs/estados e resultados públicos ao PR;
-10. solicitar revisão independente; não mesclar automaticamente.
+1. testar WhatsApp de forma controlada contra a Preview usando webhook assinado ou ambiente de teste, sem trocar silenciosamente o webhook de produção;
+2. anexar a evidência do gate WhatsApp ao PR;
+3. solicitar revisão independente;
+4. não mesclar nem promover automaticamente.
 
 ## Critérios para liberar uma promoção futura
 
@@ -55,4 +50,4 @@ Implementação e validação local estão concluídas:
 
 ## Observação operacional
 
-O ambiente bloqueou uma segunda execução externa ao atingir o limite de uso. Não contorne essa restrição. A publicação/Preview deve continuar somente quando a autorização de execução externa estiver novamente disponível.
+O Preview usa Deployment Protection. A validação foi feita pelo acesso autenticado da Vercel, sem desligar essa proteção. O webhook da Meta não deve ser apontado para um link temporário sem um plano explícito de teste e restauração.

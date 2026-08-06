@@ -21,7 +21,7 @@ A aplicação web está hospedada na Vercel e consulta o computador Linux por um
 | Ponte permanente | `https://hello-agent-pc.tail172717.ts.net` |
 | GitHub | `https://github.com/leon337/meu_primeiro_agente` |
 | Branch de correção atual | `fix/aep-browser-routing-consistency` |
-| Estado da correção | validada localmente; ainda não promovida para produção |
+| Estado da correção | PR `#14`; Preview Web validado; ainda não promovida para produção |
 | Vercel team | `predix-ai-br` |
 | Vercel project | `meu-primeiro-agente` |
 
@@ -40,7 +40,9 @@ O hostname da ponte não é um segredo, mas o endpoint só aceita chamadas com `
 - WhatsApp Cloud API foi configurado e uma conversa real já consultou o espaço em disco.
 - O runtime executivo, a ponte e o Tailscale estão ativos como serviços do usuário.
 - Três missões reais de navegador concluíram em sites públicos sem login: `example.com`, Google e Wikipédia.
-- A correção de roteamento determinístico ainda precisa passar por Preview Web/WhatsApp e revisão do PR antes de qualquer promoção.
+- O Preview do commit `ca4ae69` passou no health e em uma missão Web real para `example.com`.
+- Uma pergunta conceitual no Preview permaneceu na rota normal e não devolveu linguagem ou ID de missão.
+- A correção de roteamento determinístico ainda precisa passar pelo gate WhatsApp e revisão independente do PR antes de qualquer promoção.
 
 ## Serviços locais
 
@@ -78,12 +80,11 @@ Na Vercel, `BRIDGE_URL` e `BRIDGE_DEVICE_TOKEN` estão aplicadas a Production e 
 
 ## O que ainda falta
 
-1. Publicar a branch `fix/aep-browser-routing-consistency` e abrir PR sem merge automático.
-2. Validar a URL de Preview no Web e, com payload assinado controlado, no fluxo WhatsApp.
-3. Só depois de revisão independente decidir sobre merge e promoção para produção.
-4. Adicionar persistência externa para conversas; hoje as sessões ficam em memória e podem desaparecer quando a função Vercel reinicia.
-5. Substituir o token compartilhado da PWA por autenticação individual antes de disponibilizar o app a vários usuários.
-6. Criar monitoramento e alerta para ponte desconectada.
+1. Validar o fluxo WhatsApp no Preview com uma mensagem real ou payload assinado controlado.
+2. Só depois de revisão independente decidir sobre merge e promoção para produção.
+3. Adicionar persistência externa para conversas; hoje as sessões ficam em memória e podem desaparecer quando a função Vercel reinicia.
+4. Substituir o token compartilhado da PWA por autenticação individual antes de disponibilizar o app a vários usuários.
+5. Criar monitoramento e alerta para ponte desconectada.
 
 ## Próxima tarefa recomendada
 
