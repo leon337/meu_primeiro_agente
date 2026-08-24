@@ -1,11 +1,11 @@
 {
   "name": "Agente Executivo Pessoal",
-  "short_name": "Agente Executivo",
-  "description": "Assistente pessoal com voz, integração MCF e execução local controlada.",
+  "short_name": "AEP",
+  "description": "Central executiva pessoal com conversa, voz, missões MCF e execução local controlada.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#07111f",
-  "theme_color": "#07111f",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
