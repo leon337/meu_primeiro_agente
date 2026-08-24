@@ -3,71 +3,214 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#07111f">
-    <meta name="description" content="Agente Executivo Pessoal: assistente Gemini com voz e runtime MCF.">
+    <meta name="theme-color" content="#0b0f14">
+    <meta name="description" content="Agente Executivo Pessoal: central de conversa, voz, missões MCF e estado operacional.">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
     <title>Agente Executivo Pessoal</title>
-    <style>
-      .composer { grid-template-columns: auto 1fr auto; }
-      .voice-button { color: #edf6ff !important; background: #16314b !important; }
-      .voice-button.listening { background: #d94b64 !important; box-shadow: 0 0 0 .35rem rgba(217,75,100,.18); }
-      .toggle-row { display: flex !important; align-items: center; gap: .65rem; margin-top: 1rem; }
-      .toggle-row input { width: auto; }
-      .stacked-actions { flex-wrap: wrap; }
-      .danger { border: 1px solid rgba(255,100,120,.55); color: #ffdce2; background: rgba(217,75,100,.15); }
-    </style>
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <div class="brand-mark" aria-hidden="true">A</div>
-        <div>
-          <h1>Agente Executivo Pessoal</h1>
-          <p id="connectionStatus">Verificando conexão…</p>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand-lockup" aria-label="Agente Executivo Pessoal">
+          <div class="brand-mark" aria-hidden="true">A</div>
+          <div class="brand-copy">
+            <strong>AEP</strong>
+            <span>Agente Executivo Pessoal</span>
+          </div>
         </div>
-        <button id="settingsButton" class="icon-button" type="button" aria-label="Configurações">⚙</button>
-      </header>
 
-      <section id="messages" class="messages" aria-live="polite" aria-label="Conversa">
-        <article class="message assistant">
-          <div class="bubble">Olá. Posso conversar, receber comandos por voz e acompanhar missões do MCF.</div>
-        </article>
-      </section>
+        <nav class="primary-nav">
+          <button class="nav-item active" type="button" data-view="chat" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.6 4v-4.1A2.5 2.5 0 0 1 4 13.5z"/></svg>
+            <span>Conversa</span>
+          </button>
+          <button class="nav-item" type="button" data-view="mission">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 7.2v9.6L12 21l7.5-4.2V7.2z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+            <span>Missão</span>
+          </button>
+          <button class="nav-item" type="button" data-view="system">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 9h2M11 9h2M15 9h2"/></svg>
+            <span>Sistema</span>
+          </button>
+        </nav>
 
-      <form id="chatForm" class="composer">
-        <button id="micButton" class="voice-button" type="button" aria-label="Falar comando" title="Falar comando">●</button>
-        <label class="sr-only" for="messageInput">Sua mensagem</label>
-        <textarea id="messageInput" rows="1" maxlength="8000" placeholder="Digite ou fale um comando…" required></textarea>
-        <button id="sendButton" type="submit" aria-label="Enviar mensagem">↑</button>
-      </form>
-    </main>
+        <div class="sidebar-footer">
+          <div class="connection-mini">
+            <span id="sidebarStatusDot" class="status-dot checking" aria-hidden="true"></span>
+            <div>
+              <strong id="sidebarStatusText">Conectando</strong>
+              <small>estado operacional</small>
+            </div>
+          </div>
+          <button class="icon-button settings-trigger" type="button" aria-label="Abrir configurações" title="Configurações">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7V4.6h3v.1a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+          </button>
+        </div>
+      </aside>
+
+      <main class="chat-shell">
+        <header class="chat-header">
+          <div class="header-copy">
+            <p class="eyebrow">Central executiva</p>
+            <div class="header-title-row">
+              <h1>MESTRE</h1>
+              <span class="agent-badge">AEP</span>
+            </div>
+            <p id="connectionStatus">Verificando conexão…</p>
+          </div>
+          <div class="header-actions">
+            <button id="mobileContextButton" class="icon-button context-trigger" type="button" aria-label="Abrir painel de missão" title="Painel de missão">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 7.2v9.6L12 21l7.5-4.2V7.2z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+            </button>
+            <button class="icon-button settings-trigger mobile-settings" type="button" aria-label="Abrir configurações" title="Configurações">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7V4.6h3v.1a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <section id="messages" class="messages" aria-live="polite" aria-label="Conversa">
+          <article class="message assistant intro-message">
+            <div class="message-identity" aria-hidden="true">A</div>
+            <div class="message-content">
+              <div class="message-meta"><strong>MESTRE</strong><span>Agora</span></div>
+              <div class="bubble">Central executiva pronta. Posso conversar, receber comandos por voz e acompanhar missões do MCF.</div>
+            </div>
+          </article>
+        </section>
+
+        <div class="composer-wrap">
+          <form id="chatForm" class="composer">
+            <button id="micButton" class="voice-button" type="button" aria-label="Falar comando" title="Falar comando">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>
+            </button>
+            <label class="sr-only" for="messageInput">Sua mensagem</label>
+            <textarea id="messageInput" rows="1" maxlength="8000" placeholder="Peça algo ao seu agente…" required></textarea>
+            <button id="sendButton" class="send-button" type="submit" aria-label="Enviar mensagem" title="Enviar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4.5 14-3-5.5z"/><path d="m11.5 13.5 3-3"/></svg>
+            </button>
+          </form>
+          <p class="composer-hint">Enter envia · Shift + Enter quebra linha · ações continuam sujeitas às políticas do runtime</p>
+        </div>
+      </main>
+
+      <aside id="contextPanel" class="context-panel" aria-label="Painel contextual">
+        <header class="context-header">
+          <div>
+            <p class="eyebrow">Painel contextual</p>
+            <h2 id="contextTitle">Missão</h2>
+          </div>
+          <button id="contextCloseButton" class="icon-button context-close" type="button" aria-label="Fechar painel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <div class="context-tabs" role="tablist" aria-label="Conteúdo do painel">
+          <button class="context-tab active" type="button" data-context="mission" role="tab" aria-selected="true">Missão</button>
+          <button class="context-tab" type="button" data-context="system" role="tab" aria-selected="false">Sistema</button>
+        </div>
+
+        <section id="missionPanel" class="context-section" aria-label="Missão ativa">
+          <label class="field-label" for="missionId">Identificador da missão</label>
+          <div class="field-with-action">
+            <input id="missionId" type="text" autocomplete="off" placeholder="MCF-AEP-001">
+            <button id="missionStatusButton" class="compact-button" type="button" title="Atualizar missão">Atualizar</button>
+          </div>
+
+          <div class="mission-status-card">
+            <div class="status-heading">
+              <span id="missionStatusDot" class="status-dot neutral" aria-hidden="true"></span>
+              <div>
+                <strong id="missionStatusText">Nenhuma missão selecionada</strong>
+                <span id="missionMeta">Informe um ID para consultar o runtime.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="context-detail-list">
+            <article class="context-detail">
+              <span>Objetivo</span>
+              <p id="missionObjective">—</p>
+            </article>
+            <article class="context-detail">
+              <span>Etapa atual</span>
+              <p id="missionStep">—</p>
+            </article>
+            <article class="context-detail">
+              <span>Evidências</span>
+              <p id="missionEvidence">—</p>
+            </article>
+          </div>
+
+          <div class="context-actions">
+            <button id="emergencyStopButton" class="danger-button" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M12 7v6M12 17h.01"/></svg>
+              Parada de emergência
+            </button>
+            <p>A interrupção bloqueia novas ações da missão e preserva as evidências já registradas.</p>
+          </div>
+        </section>
+
+        <section id="systemPanel" class="context-section" aria-label="Estado do sistema" hidden>
+          <div class="health-list">
+            <article class="health-item">
+              <span id="healthGeminiDot" class="status-dot checking" aria-hidden="true"></span>
+              <div><strong>Gemini</strong><span id="healthGemini">Verificando…</span></div>
+            </article>
+            <article class="health-item">
+              <span id="healthBridgeDot" class="status-dot checking" aria-hidden="true"></span>
+              <div><strong>Computador</strong><span id="healthBridge">Verificando…</span></div>
+            </article>
+            <article class="health-item">
+              <span id="healthRuntimeDot" class="status-dot checking" aria-hidden="true"></span>
+              <div><strong>Runtime executivo</strong><span id="healthRuntime">Verificando…</span></div>
+            </article>
+            <article class="health-item">
+              <span id="healthWhatsappDot" class="status-dot checking" aria-hidden="true"></span>
+              <div><strong>WhatsApp</strong><span id="healthWhatsapp">Verificando…</span></div>
+            </article>
+          </div>
+
+          <article class="system-meta-card">
+            <span>Versão do runtime</span>
+            <strong id="appVersion">—</strong>
+          </article>
+
+          <button id="refreshHealthButton" class="secondary-button full-width" type="button">Atualizar estado</button>
+        </section>
+      </aside>
+
+      <button id="contextBackdrop" class="context-backdrop" type="button" aria-label="Fechar painel" tabindex="-1"></button>
+    </div>
 
     <dialog id="settingsDialog">
       <form method="dialog" class="settings-card">
         <div class="dialog-title">
-          <h2>Configurações</h2>
-          <button value="cancel" class="icon-button" aria-label="Fechar">×</button>
+          <div>
+            <p class="eyebrow">Preferências locais</p>
+            <h2>Configurações</h2>
+          </div>
+          <button value="cancel" class="icon-button" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
         </div>
-        <label for="accessToken">Token de acesso do aplicativo</label>
+
+        <label class="field-label" for="accessToken">Token de acesso do aplicativo</label>
         <input id="accessToken" type="password" autocomplete="off" placeholder="APP_ACCESS_TOKEN">
-        <p class="hint">O token fica somente neste dispositivo.</p>
+        <p class="hint">O token permanece somente neste dispositivo e não é exibido na conversa.</p>
 
         <label class="toggle-row" for="voiceOutput">
+          <span>
+            <strong>Resposta por voz</strong>
+            <small>Ler respostas do agente em voz alta.</small>
+          </span>
           <input id="voiceOutput" type="checkbox">
-          <span>Ler respostas em voz alta</span>
         </label>
 
-        <label for="missionId">Missão ativa para consulta ou parada</label>
-        <input id="missionId" type="text" autocomplete="off" placeholder="MCF-AEP-001">
-        <p class="hint">A parada de emergência cancela novas ações, preservando evidências.</p>
-
-        <div class="dialog-actions stacked-actions">
-          <button id="newChatButton" type="button" class="secondary">Nova conversa</button>
-          <button id="missionStatusButton" type="button" class="secondary">Consultar missão</button>
-          <button id="emergencyStopButton" type="button" class="danger">Parada de emergência</button>
-          <button id="saveSettingsButton" value="default" class="primary">Salvar</button>
+        <div class="dialog-actions">
+          <button id="newChatButton" type="button" class="secondary-button">Nova conversa</button>
+          <button id="saveSettingsButton" value="default" class="primary-button">Salvar preferências</button>
         </div>
       </form>
     </dialog>
