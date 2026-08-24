@@ -340,6 +340,7 @@ async function sendMessage(message) {
       : `Erro: ${error.message}`;
     updateMessage(pending, messageText, { error: true });
   } finally {
+    pending.classList.remove("pending");
     requestInFlight = false;
     sendButton.disabled = false;
     input.disabled = false;
