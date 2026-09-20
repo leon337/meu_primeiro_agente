@@ -70,7 +70,7 @@ def send_text(
     access_token: str,
     phone_number_id: str,
     graph_version: str,
-) -> None:
+) -> dict[str, Any]:
     url = f"https://graph.facebook.com/{graph_version}/{phone_number_id}/messages"
     response = httpx.post(
         url,
@@ -84,3 +84,5 @@ def send_text(
         timeout=20,
     )
     response.raise_for_status()
+    body = response.json()
+    return body if isinstance(body, dict) else {}

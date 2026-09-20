@@ -23,6 +23,7 @@ from app.tools.base import ToolExecutor
 from app.tools.registry import ToolRegistry
 from app.tools.remote import EmptyToolRegistry, RemoteToolRegistry
 from app.whatsapp import MessageDeduplicator, incoming_messages, send_text, valid_signature
+from app.whatsapp_audit import WhatsAppAuditClient
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
@@ -110,6 +111,16 @@ def get_chat_service() -> ChatService:
 
 
 @lru_cache
+def get_whatsapp_audit() -> WhatsAppAuditClient:
+    return WhatsAppAuditClient(
+        os.getenv("PAONOSSO_SUPABASE_URL", ""),
+        os.getenv("PAONOSSO_SUPABASE_KEY", ""),
+        os.getenv("PAONOSSO_AUDIT_TOKEN", ""),
+        os.getenv("PAONOSSO_MODEL_NAME", os.getenv("MODEL_NAME", "gemini-3.6-flash")),
+    )
+
+
+@lru_cache
 def get_bakery_chat_service() -> BakeryChatService:
     key = os.getenv("GEMINI_API_KEY", "").strip()
     supabase_url = os.getenv("PAONOSSO_SUPABASE_URL", "").strip()
@@ -124,6 +135,7 @@ def get_bakery_chat_service() -> BakeryChatService:
         supabase_url,
         supabase_key,
         os.getenv("FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite"),
+        audit=get_whatsapp_audit(),
     )
 
 
@@ -302,30 +314,71 @@ def verify_whatsapp(
     challenge: str = Query(alias="hub.challenge"),
 ) -> str:
     configured = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
-    if mode != "subscribe" or not configured or not secrets.compare_digest(token, configured):
+    if mode != "subscribe" or not configured or not secrets.compare_digest(token.encode("utf-8"), configured.encode("utf-8")):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Falha na verificação do webhook")
     return challenge
 
 
-def answer_whatsapp(sender: str, message: str) -> None:
-    """Processa uma mensagem sem deixar falhas do Gemini matarem a tarefa."""
+def answer_whatsapp(sender: str, message: str, message_id: str = "") -> None:
+    """Processa a mensagem e registra o ciclo sem deixar a auditoria quebrar o atendimento."""
+
+    audit = get_whatsapp_audit()
+    model_name = os.getenv("PAONOSSO_MODEL_NAME", os.getenv("MODEL_NAME", "gemini-3.6-flash"))
+    audit.record_event(sender, "ai_processing_started", meta_message_id=message_id or None)
 
     try:
         reply = get_bakery_chat_service().chat(sender, message)
-    except Exception:
+        audit.record_event(
+            sender,
+            "ai_reply_generated",
+            meta_message_id=message_id or None,
+            detail={"reply_length": len(reply)},
+        )
+    except Exception as exc:
         logger.exception("Falha ao responder mensagem da Pão Nosso no WhatsApp para %s", sender)
+        audit.record_event(
+            sender,
+            "ai_error",
+            meta_message_id=message_id or None,
+            detail={"error_type": type(exc).__name__},
+        )
         reply = _TEMPORARY_WHATSAPP_REPLY
 
     try:
-        send_text(
+        result = send_text(
             sender,
             reply,
             os.environ["WHATSAPP_ACCESS_TOKEN"],
             os.environ["WHATSAPP_PHONE_NUMBER_ID"],
             os.getenv("WHATSAPP_GRAPH_VERSION", "v26.0"),
         )
-    except Exception:
+        outbound_id = ""
+        messages = result.get("messages") if isinstance(result, dict) else None
+        if isinstance(messages, list) and messages and isinstance(messages[0], dict):
+            outbound_id = str(messages[0].get("id") or "")
+        audit.record_message(
+            sender,
+            outbound_id or None,
+            "outbound",
+            reply,
+            "sent",
+            model_name=model_name,
+        )
+        audit.record_event(
+            sender,
+            "outbound_sent",
+            meta_message_id=outbound_id or None,
+            detail={"reply_to": message_id or None},
+        )
+    except Exception as exc:
         logger.exception("Falha ao enviar resposta do WhatsApp para %s", sender)
+        audit.record_message(sender, None, "outbound", reply, "failed", model_name=model_name)
+        audit.record_event(
+            sender,
+            "send_error",
+            meta_message_id=message_id or None,
+            detail={"error_type": type(exc).__name__},
+        )
 
 
 @app.post("/api/whatsapp/webhook", status_code=200)
@@ -344,10 +397,24 @@ async def whatsapp_webhook(
 
     accepted = 0
     duplicates = 0
+    audit = get_whatsapp_audit()
     for message_id, sender, message in incoming_messages(payload):
         if message_id and not _WHATSAPP_DEDUPLICATOR.claim(message_id):
             duplicates += 1
+            audit.record_event(sender, "duplicate_skipped", meta_message_id=message_id)
             continue
         accepted += 1
-        background_tasks.add_task(answer_whatsapp, sender, message)
+        audit.record_message(
+            sender,
+            message_id or None,
+            "inbound",
+            message,
+            "received",
+        )
+        audit.record_event(
+            sender,
+            "webhook_received",
+            meta_message_id=message_id or None,
+        )
+        background_tasks.add_task(answer_whatsapp, sender, message, message_id)
     return {"status": "accepted", "accepted": str(accepted), "duplicates": str(duplicates)}

@@ -12,6 +12,7 @@ import httpx
 from app.agent import Agent
 from app.models import ToolDefinition
 from app.providers.gemini_provider import GeminiProvider
+from app.whatsapp_audit import WhatsAppAuditClient
 
 
 BAKERY_SYSTEM_INSTRUCTION = """
@@ -42,10 +43,17 @@ def _money(cents: int) -> str:
 class BakeryToolRegistry:
     """Ferramentas estritamente limitadas ao backend Pão Nosso."""
 
-    def __init__(self, supabase_url: str, publishable_key: str, customer_phone: str) -> None:
+    def __init__(
+        self,
+        supabase_url: str,
+        publishable_key: str,
+        customer_phone: str,
+        audit: WhatsAppAuditClient | None = None,
+    ) -> None:
         self._url = supabase_url.rstrip("/")
         self._key = publishable_key.strip()
         self._customer_phone = "".join(ch for ch in customer_phone if ch.isdigit())
+        self._audit = audit
         if not self._url or not self._key:
             raise ValueError("Backend da Pão Nosso não configurado")
 
@@ -220,13 +228,43 @@ class BakeryToolRegistry:
 
     def execute(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
         arguments = arguments or {}
-        if name == "bakery_search_catalog":
-            return self._search_catalog(arguments)
-        if name == "bakery_create_order":
-            return self._create_order(arguments)
-        if name == "bakery_order_status":
-            return self._order_status(arguments)
-        raise ValueError(f"Ferramenta da padaria não permitida: {name}")
+        if self._audit:
+            self._audit.record_event(
+                self._customer_phone,
+                "tool_call",
+                tool_name=name,
+                detail={"arguments": arguments},
+            )
+        try:
+            if name == "bakery_search_catalog":
+                result = self._search_catalog(arguments)
+            elif name == "bakery_create_order":
+                result = self._create_order(arguments)
+            elif name == "bakery_order_status":
+                result = self._order_status(arguments)
+            else:
+                raise ValueError(f"Ferramenta da padaria não permitida: {name}")
+        except Exception as exc:
+            if self._audit:
+                self._audit.record_event(
+                    self._customer_phone,
+                    "tool_error",
+                    tool_name=name,
+                    detail={"error_type": type(exc).__name__},
+                )
+            raise
+
+        order_code = str(result.get("order_code") or "") or None
+        event_type = "order_created" if name == "bakery_create_order" else "tool_result"
+        if self._audit:
+            self._audit.record_event(
+                self._customer_phone,
+                event_type,
+                tool_name=name,
+                order_code=order_code,
+                detail={"result": result},
+            )
+        return result
 
 
 @dataclass
@@ -246,6 +284,7 @@ class BakeryChatService:
         publishable_key: str,
         fallback_model_name: str | None = None,
         max_sessions: int = 200,
+        audit: WhatsAppAuditClient | None = None,
     ) -> None:
         self._api_key = api_key
         self._model_name = model_name
@@ -253,11 +292,12 @@ class BakeryChatService:
         self._url = supabase_url
         self._key = publishable_key
         self._max_sessions = max_sessions
+        self._audit = audit
         self._sessions: OrderedDict[str, _BakerySession] = OrderedDict()
         self._lock = RLock()
 
     def _new_agent(self, sender: str) -> Agent:
-        registry = BakeryToolRegistry(self._url, self._key, sender)
+        registry = BakeryToolRegistry(self._url, self._key, sender, self._audit)
         provider = GeminiProvider(
             self._api_key,
             self._model_name,
