@@ -1,0 +1,13 @@
+PÃO NOSSO ORDER LOOKUP SMOKE
+
+Scenario: order created through storefront, then queried from the associated WhatsApp identity.
+
+Database/RPC smoke:
+- order persisted: PASS
+- phone identity canonicalization: PASS
+- order status RPC from WhatsApp representation: PASS
+- unrelated phone denied by zero-result isolation: PASS
+- existing earlier representation remains compatible: PASS
+
+Application deploy required for this fix: NO
+Reason: the production WhatsApp assistant already calls the corrected Supabase RPC; the change is effective at the database boundary.
