@@ -1,0 +1,13 @@
+mission_id: MCF-20260920-PAO-NOSSO-PRODUCTION-001
+project_id: pao-nosso
+phase_id: PHASE-PAO-NOSSO-PRODUCTION-001
+status: EM_EXECUCAO
+coordinator: MESTRE
+human_authority: LEANDRO
+source_of_truth:
+  - .mcf/project-capsule.yaml
+  - docs/MCF-PN-WA-STATE.md
+  - app/bakery.py
+  - app/server.py
+sibling_mission: MCF-20260920-OCI-PAONOSSO-RUNTIME-001
+next_action: WAIT_FOR_OCI_CAPACITY_THEN_DEPLOY_VALIDATE_BEFORE_CUTOVER

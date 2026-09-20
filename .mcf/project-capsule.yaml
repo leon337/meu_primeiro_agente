@@ -1,0 +1,26 @@
+schema_version: 1
+project_id: pao-nosso
+
+purpose: >-
+  Operar e evoluir o canal digital da Padaria Pão Nosso, incluindo o assistente
+  de WhatsApp com IA, catálogo/pedidos/status via Supabase e sua infraestrutura
+  de runtime, preservando isolamento das ferramentas executivas do AEP.
+
+lifecycle: ACTIVE
+
+snapshot:
+  current_workstream: whatsapp-production-continuity-and-oci-runtime-migration
+  current_status: WHATSAPP_OPERATIONAL__OCI_RUNTIME_BLOCKED_BY_A1_CAPACITY
+  next_action: >-
+    Preserve the current working Meta/Vercel WhatsApp path while the OCI
+    Always Free A1 runtime is provisioned. After OCI is RUNNING, deploy and
+    validate the backend end-to-end before any production webhook cutover.
+  blockers:
+    - Oracle OCI VM.Standard.A1.Flex 2 OCPU / 12 GB creation is currently blocked by provider capacity in AD-1.
+    - The operational Pão Nosso code lineage is feat/pn-wa-audit-persistence@1cb59e3cf99a420357ffa9d0fa7476ef8cbacee2 and is not represented by repository main.
+    - Production Meta webhook cutover must not occur before OCI health, HTTPS, callback verification, Supabase/Gemini tool calls, and rollback are validated.
+
+sources:
+  current_state: docs/MCF-PN-WA-STATE.md
+
+observed_at: "2026-09-20T06:19:47-03:00"
