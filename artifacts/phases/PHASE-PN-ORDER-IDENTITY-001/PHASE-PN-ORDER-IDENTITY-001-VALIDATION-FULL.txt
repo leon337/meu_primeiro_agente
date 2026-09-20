@@ -1,0 +1,33 @@
+PHASE-PN-ORDER-IDENTITY-001 FULL VALIDATION
+
+PRECONDITION
+- live order existed in public.orders
+- WhatsApp audit showed bakery_order_status called with the expected PN code
+- tool result before migration was found=false
+
+ROOT CAUSE CHECK
+- storefront representation: Brazilian national mobile with ninth digit
+- Meta representation: country code + national legacy mobile representation
+- previous rule: rightmost 11 raw digits
+- result: non-equivalent raw comparison
+
+POST-MIGRATION CHECKS
+1. normalize_br_phone(meta_format) = normalize_br_phone(storefront_format)
+   RESULT: true
+
+2. customer_order_status(valid_code, equivalent_whatsapp_phone)
+   RESULT: exactly 1 row
+
+3. customer_order_status(valid_code, unrelated_phone)
+   RESULT: 0 rows
+
+4. customer_order_status(earlier_order, equivalent_storefront_phone)
+   RESULT: exactly 1 row
+
+5. returned order data
+   RESULT: status, total, fulfillment, payment method and item lines match persisted order
+
+SECURITY
+- authorization remains code + equivalent phone
+- no lookup by PN alone
+- no secret or full customer phone is stored in this PRF
