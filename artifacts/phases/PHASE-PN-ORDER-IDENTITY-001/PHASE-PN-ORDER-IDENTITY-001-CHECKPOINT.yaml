@@ -1,0 +1,22 @@
+mission_id: MCF-20260920-PAO-NOSSO-ORDER-IDENTITY-001
+phase_id: PHASE-PN-ORDER-IDENTITY-001
+parent_mission_id: MCF-20260920-PAO-NOSSO-PRODUCTION-001
+state: VALIDATED
+risk_class: C
+human_authority: LEANDRO
+coordinator: MESTRE
+decision_authority: LEO
+issue: 17
+branch: fix/pn-order-phone-identity-20260920
+production:
+  supabase_project: paonosso-v3
+  migration: 20260920124044_fix_br_phone_identity
+validation:
+  equivalent_formats: PASS
+  correct_match_count: 1
+  unrelated_match_count: 0
+  reverse_compatibility_count: 1
+unresolved_findings:
+  - pre-existing Supabase SECURITY DEFINER exposure warnings
+  - pre-existing unindexed foreign key performance notices
+next_action: COMPLETE_GIT_REVIEW_AND_LEO_GATE
