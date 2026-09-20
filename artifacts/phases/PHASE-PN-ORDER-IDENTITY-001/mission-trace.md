@@ -36,6 +36,7 @@ Handoff: Manoel → Renato.
 ## Renato — validation
 Action: repeated failed lookup and isolation cases after migration.
 Evidence: equivalent=true; correct=1; unrelated=0; reverse-compatible=1.
+Additional evidence: production `/api/health` returned status ok with WhatsApp and Pão Nosso configured.
 Handoff: Renato → Ricardo.
 
 ## Ricardo — post-change review
@@ -44,10 +45,23 @@ Evidence: only pre-existing SECURITY DEFINER and FK-index findings recorded; no 
 Handoff: Ricardo → Carmem/Augusto.
 
 ## Carmem/Augusto — traceability
-Action: generated Class C PRF and continuity checkpoint.
+Action: generated Class C PRF and SHA-256 manifest.
 Handoff: Carmem/Augusto → Emily/Gabriel.
 
-## Pending
-- independent audit;
-- PR linkage;
-- LÉO final gate.
+## Emily — independent audit
+Action: reviewed the complete PR #18 diff, production evidence, isolation smoke, endpoint health and AEP CI.
+Evidence: audit review #5260596178; AEP CI #86 success on Python 3.11 and 3.12.
+Decision: APPROVABLE; no blocking finding.
+Handoff: Emily → LÉO.
+
+## LÉO — final gate
+Input: production migration active, security boundary preserved, CI green, audit approvable.
+Decision: APPROVED for delivery and merge.
+Handoff: LÉO → Gabriel.
+
+## Gabriel — integration
+Action: PR #18 prepared for merge into `mission/pao-nosso-context-20260920`.
+External status: Vercel preview build-rate-limit classified non-blocking; no redeploy is required for this DB-only fix.
+
+## Final state
+ENTREGUE — production lookup defect corrected and validated.
