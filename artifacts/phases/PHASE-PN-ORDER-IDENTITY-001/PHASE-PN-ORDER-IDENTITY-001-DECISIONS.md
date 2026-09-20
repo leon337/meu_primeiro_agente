@@ -8,5 +8,6 @@
 6. **Renato** — required positive, negative and backward-compatible validation.
 7. **Gabriel** — created a dedicated fix branch from the live Pão Nosso mission lineage, not repository main.
 8. **Carmem/Augusto** — required PRF and chronological trace for the Class C phase.
-9. **Emily** — independent audit pending final Git/PR evidence.
-10. **LÉO** — gate pending final PRF and audit evidence.
+9. **Emily** — audited PR #18, live Supabase evidence, endpoint health and CI; result: APPROVABLE, with no blocking finding.
+10. **LÉO** — approved delivery and merge after production validation and AEP CI success.
+11. **MESTRE** — classified the Vercel preview build-rate-limit as non-blocking because this database migration is already active and requires no application redeploy.
