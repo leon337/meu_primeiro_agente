@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.chat_service import ChatService
+from app.bakery import BakeryChatService
 from app.legal_pages import DATA_DELETION_HTML, PRIVACY_HTML, TERMS_HTML
 from app.mcf.remote import RemoteMissionClient, RemoteMissionError
 from app.tools.base import ToolExecutor
@@ -109,6 +110,24 @@ def get_chat_service() -> ChatService:
 
 
 @lru_cache
+def get_bakery_chat_service() -> BakeryChatService:
+    key = os.getenv("GEMINI_API_KEY", "").strip()
+    supabase_url = os.getenv("PAONOSSO_SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("PAONOSSO_SUPABASE_KEY", "").strip()
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY não configurada")
+    if not supabase_url or not supabase_key:
+        raise RuntimeError("Backend Pão Nosso não configurado")
+    return BakeryChatService(
+        key,
+        os.getenv("PAONOSSO_MODEL_NAME", os.getenv("MODEL_NAME", "gemini-3.6-flash")),
+        supabase_url,
+        supabase_key,
+        os.getenv("FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite"),
+    )
+
+
+@lru_cache
 def get_mission_client() -> RemoteMissionClient:
     bridge_url = os.getenv("BRIDGE_URL", "").strip()
     control_token = os.getenv("AEP_CONTROL_TOKEN", "").strip()
@@ -181,6 +200,11 @@ def health() -> dict[str, object]:
                 "WHATSAPP_PHONE_NUMBER_ID",
                 "WHATSAPP_APP_SECRET",
             )
+        ),
+        "paonosso_whatsapp_configured": bool(
+            os.getenv("PAONOSSO_SUPABASE_URL")
+            and os.getenv("PAONOSSO_SUPABASE_KEY")
+            and os.getenv("GEMINI_API_KEY")
         ),
     }
 
@@ -287,9 +311,9 @@ def answer_whatsapp(sender: str, message: str) -> None:
     """Processa uma mensagem sem deixar falhas do Gemini matarem a tarefa."""
 
     try:
-        reply = get_chat_service().chat(f"whatsapp:{sender}", message)
+        reply = get_bakery_chat_service().chat(sender, message)
     except Exception:
-        logger.exception("Falha ao responder mensagem do WhatsApp para %s", sender)
+        logger.exception("Falha ao responder mensagem da Pão Nosso no WhatsApp para %s", sender)
         reply = _TEMPORARY_WHATSAPP_REPLY
 
     try:

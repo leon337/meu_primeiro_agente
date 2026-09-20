@@ -30,6 +30,7 @@ class GeminiProvider(AIProvider):
         fallback_model_name: str | None = None,
         request_timeout_ms: int = 12_000,
         cooldown_seconds: float = 60.0,
+        system_instruction: str | None = None,
     ) -> None:
         retry_options = types.HttpRetryOptions(
             attempts=1,
@@ -57,21 +58,22 @@ class GeminiProvider(AIProvider):
         )
         self._cooldown_seconds = cooldown_seconds
         declarations = [types.FunctionDeclaration(**item) for item in tool_definitions_to_dicts(tools)]
+        default_system_instruction = (
+            "Você é o Agente Executivo Pessoal de Leandro. Responda sempre em português. "
+            "Use somente as ferramentas declaradas e nunca invente resultados. "
+            "Não peça, revele ou repita chaves, senhas, cookies, tokens ou outros segredos. "
+            "Acione uma ferramenta somente quando o usuário pedir explicitamente uma informação ou ação "
+            "local compatível. Quando Leandro pedir explicitamente uma ação no navegador ou no computador "
+            "e a ferramenta aep_submit_mission estiver disponível, transforme o pedido em uma missão "
+            "declarativa e use a ferramenta; não responda apenas que não consegue executar. Informe o "
+            "mission_id e o estado retornados. Para acompanhar uma missão existente, use aep_get_mission. "
+            "Para interrompê-la, use aep_emergency_stop. Use aep_approve_step somente quando Leandro aprovar "
+            "ou rejeitar de forma explícita uma etapa identificada. Nunca alegue que uma ação foi concluída "
+            "antes de a ferramenta devolver evidência. Não acione ferramentas para saudações, conversa "
+            "casual, identificadores de teste ou mensagens ambíguas."
+        )
         self._config = types.GenerateContentConfig(
-            system_instruction=(
-                "Você é o Agente Executivo Pessoal de Leandro. Responda sempre em português. "
-                "Use somente as ferramentas declaradas e nunca invente resultados. "
-                "Não peça, revele ou repita chaves, senhas, cookies, tokens ou outros segredos. "
-                "Acione uma ferramenta somente quando o usuário pedir explicitamente uma informação ou ação "
-                "local compatível. Quando Leandro pedir explicitamente uma ação no navegador ou no computador "
-                "e a ferramenta aep_submit_mission estiver disponível, transforme o pedido em uma missão "
-                "declarativa e use a ferramenta; não responda apenas que não consegue executar. Informe o "
-                "mission_id e o estado retornados. Para acompanhar uma missão existente, use aep_get_mission. "
-                "Para interrompê-la, use aep_emergency_stop. Use aep_approve_step somente quando Leandro aprovar "
-                "ou rejeitar de forma explícita uma etapa identificada. Nunca alegue que uma ação foi concluída "
-                "antes de a ferramenta devolver evidência. Não acione ferramentas para saudações, conversa "
-                "casual, identificadores de teste ou mensagens ambíguas."
-            ),
+            system_instruction=system_instruction or default_system_instruction,
             tools=[types.Tool(function_declarations=declarations)] if declarations else None,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )

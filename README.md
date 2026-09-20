@@ -156,3 +156,23 @@ journalctl --user -u hello-agent-tailscaled.service -f
 ```
 
 O serviço usa o modo de rede em espaço do usuário e não exige instalação administrativa. O estado de autenticação fica somente em `.tools/tailscale-state/`, que é ignorado pelo Git.
+
+
+## Pão Nosso no WhatsApp
+
+O canal WhatsApp reutiliza a mesma integração Meta/WhatsApp Cloud API já existente, mas o webhook agora roteia as mensagens para um assistente dedicado da **Pão Nosso**. O endpoint `/api/chat` continua sendo o AEP web; apenas o canal WhatsApp usa o contexto e as ferramentas da padaria.
+
+Variáveis adicionais na Vercel:
+
+```env
+PAONOSSO_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+PAONOSSO_SUPABASE_KEY=sb_publishable_...
+```
+
+O assistente WhatsApp possui somente três capacidades de negócio:
+
+- consultar catálogo, preços e disponibilidade no Supabase;
+- criar pedido real no PostgreSQL e devolver código `PN-XXXX`;
+- consultar status de um pedido usando o código PN e o telefone remetente do próprio WhatsApp.
+
+Ele não recebe as ferramentas executivas do AEP, não lê arquivos locais e não pode consultar pedidos de outro telefone.
