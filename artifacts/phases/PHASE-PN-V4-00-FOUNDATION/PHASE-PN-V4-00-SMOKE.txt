@@ -1,0 +1,23 @@
+PÃO NOSSO V4 FOUNDATION SMOKE
+
+storefront:
+  url=https://paonosso-v3.vercel.app
+  result=PASS
+  observed_title=Pão Nosso V3
+
+backend:
+  url=https://meu-primeiro-agente-indol.vercel.app/api/health
+  result=PASS
+  status=ok
+  whatsapp_configured=true
+  paonosso_whatsapp_configured=true
+
+database:
+  provider=Supabase
+  project=paonosso-v3
+  region=sa-east-1
+  status=ACTIVE_HEALTHY
+  result=PASS
+
+runtime_mutation_performed=NO
+storefront_cutover_performed=NO

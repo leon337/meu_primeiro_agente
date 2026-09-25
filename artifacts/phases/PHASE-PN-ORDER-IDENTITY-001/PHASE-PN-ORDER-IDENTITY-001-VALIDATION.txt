@@ -1,0 +1,11 @@
+PHASE-PN-ORDER-IDENTITY-001 VALIDATION
+
+production_migration=PASS
+migration_id=20260920124044_fix_br_phone_identity
+equivalent_phone_formats=PASS
+correct_whatsapp_order_match=PASS count=1
+unrelated_phone_isolation=PASS count=0
+reverse_compatibility=PASS count=1
+order_payload_consistency=PASS
+secrets_committed=NO
+historical_orders_rewritten=NO

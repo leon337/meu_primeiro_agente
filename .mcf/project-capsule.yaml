@@ -1,0 +1,81 @@
+schema_version: 1
+project_id: pao-nosso
+
+purpose: >-
+  Operar e evoluir a plataforma digital da Padaria Pão Nosso, com pedidos Web
+  e WhatsApp sobre uma única verdade transacional em PostgreSQL/Supabase,
+  preservando segurança, rastreabilidade e isolamento do AEP.
+
+lifecycle: ACTIVE
+
+identity:
+  canonical_repository: leon337/meu_primeiro_agente
+  active_branch: mission/pao-nosso-v4-001
+  aliases:
+    - Pão Nosso
+    - Pão Nosso V4
+    - Pao Nosso Platform
+
+mission:
+  active: MCF-PAO-NOSSO-V4-001
+  product_issue: 19
+  mcf_issue: 375
+  phase: PHASE-PN-V4-00-FOUNDATION
+  phase_issue: 20
+
+snapshot:
+  current_workstream: v4-foundation-and-operational-source-of-truth
+  current_status: V3_ORDER_FLOW_OPERATIONAL__V4_FOUNDATION_IN_PROGRESS
+  verified_capabilities:
+    - storefront creates persisted PN order
+    - WhatsApp finds persisted order by equivalent phone identity
+    - WhatsApp creates real order
+    - catalog is backed by Supabase
+    - WhatsApp events are auditable
+  next_action: >-
+    Reconcile the exact source of paonosso-v3.vercel.app with canonical Git,
+    establish a reproducible storefront deployment path, execute the V4.0
+    end-to-end smoke, and close the foundation phase.
+  blockers:
+    - The exact Git source that produces paonosso-v3.vercel.app is not yet reconciled.
+
+hosting:
+  storefront:
+    provider: Vercel
+    url: https://paonosso-v3.vercel.app
+    source_status: NOT_RECONCILED
+  backend:
+    provider: Vercel
+    url: https://meu-primeiro-agente-indol.vercel.app
+    source_status: VERSIONED_IN_CANONICAL_REPOSITORY
+  database:
+    provider: Supabase
+    project: paonosso-v3
+    project_ref: iavoqcjglmnpdnuseweo
+    region: sa-east-1
+  whatsapp:
+    provider: Meta WhatsApp Cloud API
+  ai:
+    provider: Google Gemini API
+
+context:
+  roadmap: ROADMAP.md
+  checklist: CHECKLIST.md
+  architecture: docs/PAO_NOSSO_ARCHITECTURE.md
+  service_map: docs/PAO_NOSSO_SERVICE_MAP.md
+  operations: docs/PAO_NOSSO_OPERATIONS.md
+
+governance:
+  framework: MCF
+  human_authority: LEANDRO
+  coordinator: MESTRE
+  operational_gate: LEO
+  risk_class: C
+  automatic_merge: false
+  false_green_allowed: false
+
+freshness:
+  operational_state: LIVE_REQUIRED
+  project_identity: DURABLE
+
+observed_at: "2026-09-25"

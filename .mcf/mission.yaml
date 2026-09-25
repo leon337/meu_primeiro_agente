@@ -1,0 +1,104 @@
+mission_contract:
+  mission_id: MCF-PAO-NOSSO-V4-001
+  parent_mission_id: null
+  phase_id: PHASE-PN-V4-00-FOUNDATION
+  title: "Pão Nosso V4 — Central Operacional e Evolução Contínua"
+  objective: >-
+    Evoluir o Pão Nosso em fases rastreáveis até uma plataforma operacional
+    completa para Web, WhatsApp, operação, produção, estoque, pagamento,
+    entrega, analytics e agente seguro.
+  expected_outcome: >-
+    Roadmap e checklist versionados governam cada implantação; toda fase deixa
+    código, testes, smoke, documentação, evidência e checkpoint.
+  scope:
+    - painel operacional
+    - status e notificacoes WhatsApp
+    - clientes e historico
+    - cardapio administravel
+    - fila de producao
+    - estoque
+    - Pix
+    - entrega
+    - analytics
+    - agente ampliado
+    - hardening e observabilidade
+  out_of_scope:
+    - substituir o storefront atual antes de reconciliar sua fonte
+    - permitir lookup de pedido por codigo sem identidade do cliente
+    - expor segredos no Git
+    - tratar merge como prova de deploy
+  inputs:
+    - fluxo Pao Nosso V3 validado
+    - Supabase paonosso-v3
+    - WhatsApp Cloud API
+    - backend FastAPI/Vercel
+  source_of_truth:
+    - README.md
+    - ROADMAP.md
+    - CHECKLIST.md
+    - .mcf/project-capsule.yaml
+    - docs/PAO_NOSSO_ARCHITECTURE.md
+    - provider live
+    - GitHub live
+  assumptions:
+    - o repositório operacional atual permanece leon337/meu_primeiro_agente
+    - o backend Pao Nosso compartilha deploy com AEP mas mantém isolamento de ferramentas
+  acceptance_criteria:
+    - roadmap e checklist persistidos
+    - mapa de servicos e hosting documentado
+    - fases vinculadas a issues
+    - Project Registry MCF criado
+    - checkpoint recuperavel
+    - cada futura fase exige evidencia antes de conclusao
+  authorizations:
+    - LEANDRO autorizou explicitamente criar e registrar a missao
+    - LEANDRO autorizou estruturar roadmap e checklist sem novas confirmacoes rotineiras
+  prohibitions:
+    - nao inventar estado de provider
+    - nao versionar credenciais
+    - nao apagar pedidos como forma de rollback
+    - nao fazer cutover do storefront sem fonte reconciliada
+  risk_class: C
+  current_state: EM_EXECUCAO
+  cycle: 1
+  selected_agents:
+    - MESTRE
+    - Sofia
+    - Eduardo
+    - Manoel
+    - Beatriz
+    - Ricardo
+    - Julia
+    - Renato
+    - Augusto
+    - Carmem
+    - Miriam
+    - Emily
+    - Gabriel
+  decision_authority: LEO
+  human_escalation_triggers:
+    - novo custo financeiro relevante
+    - mudança material de finalidade
+    - ação externa irreversível de alto impacto
+    - obrigação jurídica nova
+  phase_artifact_directory: artifacts/phases/PHASE-PN-V4-00-FOUNDATION
+
+tracking:
+  project_issue: 19
+  current_phase_issue: 20
+  mcf_issue: 375
+  roadmap: ROADMAP.md
+  checklist: CHECKLIST.md
+
+deployment_baseline:
+  storefront: https://paonosso-v3.vercel.app
+  backend: https://meu-primeiro-agente-indol.vercel.app
+  database_provider: Supabase
+  database_project: paonosso-v3
+  database_region: sa-east-1
+  whatsapp_provider: Meta WhatsApp Cloud API
+
+known_gaps:
+  - storefront_source_not_reconciled_with_canonical_git
+
+next_action: RECONCILE_STOREFRONT_SOURCE_AND_CLOSE_V4_0
