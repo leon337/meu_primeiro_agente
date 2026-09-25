@@ -1,178 +1,402 @@
-# Hello Agent
+# Pão Nosso — Plataforma Digital V4
 
-Assistente em Python conectado ao Gemini, disponível no terminal, como API web, PWA instalável e por webhook da WhatsApp Cloud API. O modelo roda na nuvem; as ferramentas locais continuam limitadas a uma lista fechada.
+Sistema digital da **Padaria Pão Nosso** para pedidos via Web e WhatsApp, com PostgreSQL/Supabase como fonte de verdade de catálogo, pedidos e estados.
 
-**Produção:** https://meu-primeiro-agente-indol.vercel.app
+> **Missão ativa:** `MCF-PAO-NOSSO-V4-001`  
+> **Issue do produto:** #19  
+> **Roadmap:** [ROADMAP.md](ROADMAP.md)  
+> **Checklist:** [CHECKLIST.md](CHECKLIST.md)  
+> **Arquitetura:** [docs/PAO_NOSSO_ARCHITECTURE.md](docs/PAO_NOSSO_ARCHITECTURE.md)
 
-## Documentação
+---
 
-- [Estado atual e passagem para outra IA](docs/PROJECT_STATE.md)
-- [Arquitetura e fluxo completo](docs/ARCHITECTURE.md)
-- [Instalação e implantação](docs/SETUP_AND_DEPLOYMENT.md)
-- [Operação e solução de problemas](docs/OPERATIONS.md)
-- [Modelo de segurança](docs/SECURITY.md)
-- [Histórico de construção e decisões](docs/DECISIONS.md)
-- [Instruções para agentes de IA](AGENTS.md)
+## 1. Estado atual
 
-## Segurança e arquitetura
+O fluxo principal já funciona ponta a ponta:
 
-O `Agent` coordena a conversa sem conhecer o Gemini. `AIProvider` define o contrato substituível do provedor. `GeminiProvider` converte esse contrato para o SDK oficial. `ToolRegistry` funciona como lista fechada: nomes ou parâmetros não previstos são recusados.
+1. cliente monta pedido no site;
+2. o pedido é persistido no Supabase;
+3. recebe código `PN-XXXX`;
+4. o cliente envia o código no WhatsApp;
+5. o agente consulta o pedido real;
+6. o agente retorna itens, total, recebimento, pagamento e status;
+7. o WhatsApp também consegue criar pedidos diretamente.
 
-Não há execução de shell, leitura de conteúdo, escrita, exclusão nem envio de arquivos. `list_files` aceita somente caminhos relativos dentro de `ALLOWED_DIRECTORY`, bloqueia `..` e retorna apenas nome, tipo e tamanho. Cada execução autorizada é impressa com horário, nome e parâmetros.
+A correção de identidade telefônica garante compatibilidade entre formatos do site e da Meta sem permitir consulta de pedido por telefone não relacionado.
 
-## Preparação
+---
 
-Requer Python 3.11 ou superior.
+## 2. Serviços e onde estão hospedados
+
+| Serviço | Hospedagem | Endereço/identidade | Função |
+|---|---|---|---|
+| **Storefront Pão Nosso V3** | Vercel | https://paonosso-v3.vercel.app | cardápio, carrinho, checkout e geração PN |
+| **Backend / WhatsApp / agente** | Vercel | https://meu-primeiro-agente-indol.vercel.app | FastAPI, webhook Meta, agente Pão Nosso |
+| **Health backend** | Vercel | https://meu-primeiro-agente-indol.vercel.app/api/health | saúde/configuração |
+| **Banco** | Supabase | projeto `paonosso-v3` | PostgreSQL, RPCs, catálogo, pedidos e ledger |
+| **Região do banco** | Supabase | `sa-east-1` | região técnica do PostgreSQL |
+| **WhatsApp** | Meta WhatsApp Cloud API | configurado via env | entrada e saída de mensagens |
+| **IA** | Google Gemini API | configurado via env | linguagem e seleção de ferramentas |
+| **Código operacional** | GitHub | `leon337/meu_primeiro_agente` | backend, migrations, docs e histórico |
+| **Governança** | GitHub / MCF | `leon337/multiagent-collaboration-framework` | missão, Project Registry e gates |
+
+### Importante
+
+A página raiz de:
+
+`https://meu-primeiro-agente-indol.vercel.app`
+
+é o **Agente Executivo Pessoal (AEP)**. O mesmo deployment hospeda o endpoint WhatsApp da Pão Nosso, mas **não é o site da padaria**.
+
+O site da padaria é:
+
+**https://paonosso-v3.vercel.app**
+
+Hosts `*.ts.net` ligados ao AEP/bridge também não são a loja.
+
+---
+
+## 3. Limite conhecido do repositório
+
+O backend e a integração Pão Nosso/WhatsApp estão versionados aqui.
+
+O storefront público V3 está ativo e foi verificado, porém a **fonte exata que gera `paonosso-v3.vercel.app` ainda não foi reconciliada com esta árvore Git**.
+
+Isso é uma pendência formal da V4.0. Até a reconciliação:
+
+- não substituir o storefront atual por uma cópia improvisada;
+- não declarar o deploy do storefront reproduzível;
+- localizar/exportar/versionar a fonte antes de qualquer cutover.
+
+---
+
+## 4. Como o sistema funciona
+
+### Pedido iniciado no site
+
+```text
+Cliente
+  │
+  ▼
+Pão Nosso Web / Vercel
+  │
+  ├── lê produtos
+  │
+  └── create_order(...)
+           │
+           ▼
+   Supabase/PostgreSQL
+           │
+           ├── orders
+           ├── order_items
+           └── código PN
+           │
+           ▼
+Mensagem preparada para WhatsApp
+           │
+           ▼
+Meta WhatsApp Cloud API
+           │
+           ▼
+FastAPI / Vercel
+           │
+           ▼
+BakeryChatService + Gemini
+           │
+           ▼
+bakery_order_status
+           │
+           ▼
+Supabase
+```
+
+### Pedido iniciado no WhatsApp
+
+```text
+WhatsApp
+  │
+  ▼
+Meta webhook
+  │
+  ▼
+FastAPI
+  │
+  ▼
+BakeryChatService
+  │
+  ├── bakery_search_catalog
+  ├── bakery_create_order
+  └── bakery_order_status
+           │
+           ▼
+       Supabase
+```
+
+O Gemini **não é fonte de verdade** para preço, status, total ou código PN. Ele deve consultar ferramentas ligadas ao banco.
+
+---
+
+## 5. Dados atuais
+
+Tabelas principais:
+
+- `products` — catálogo;
+- `orders` — cabeçalho do pedido;
+- `order_items` — itens congelados no momento da compra;
+- `whatsapp_conversations` — conversas;
+- `whatsapp_messages` — mensagens auditadas;
+- `whatsapp_events` — eventos/tool calls;
+- `app_config` — configuração interna protegida.
+
+RPCs importantes:
+
+- `create_order`;
+- `customer_order_status`;
+- funções administrativas;
+- funções de auditoria WhatsApp.
+
+Migrações ficam em:
+
+`supabase/migrations/`
+
+---
+
+## 6. Código Pão Nosso no repositório
+
+### Backend do agente
+
+- `app/bakery.py` — agente e ferramentas da padaria;
+- `app/whatsapp.py` — parsing, assinatura e envio Meta;
+- `app/whatsapp_audit.py` — ledger/auditoria;
+- `app/server.py` — FastAPI, health e webhook.
+
+### Banco
+
+- `supabase/migrations/`
+
+### MCF / contexto
+
+- `.mcf/mission.yaml`
+- `.mcf/project-capsule.yaml`
+- `artifacts/phases/`
+
+### Evolução V4
+
+- `ROADMAP.md`
+- `CHECKLIST.md`
+- `docs/PAO_NOSSO_ARCHITECTURE.md`
+- `docs/PAO_NOSSO_SERVICE_MAP.md`
+- `docs/PAO_NOSSO_OPERATIONS.md`
+
+---
+
+## 7. Setup local do backend
+
+Requer Python 3.11+.
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate       # Windows: .venv\\Scripts\\activate
+source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 cp .env.example .env
-```
-
-Edite `.env`:
-
-```env
-GEMINI_API_KEY=sua_chave_aqui
-ALLOWED_DIRECTORY=/caminho/absoluto/para/uma/pasta
-MODEL_NAME=gemini-3.6-flash
-FALLBACK_MODEL_NAME=gemini-3.5-flash-lite
-APP_ACCESS_TOKEN=crie_um_token_longo_e_aleatorio
-```
-
-Crie uma chave no [Google AI Studio](https://aistudio.google.com/app/apikey). Nunca versione o `.env`.
-
-## Uso
-
-### Terminal
-
-Na raiz do projeto:
-
-```bash
-python3 -m app.main
-```
-
-Comandos locais: `/ajuda`, `/ferramentas` e `/sair`. Exemplos de perguntas: “Quanto espaço livre tenho?”, “Como está a memória?” ou “Liste os arquivos da pasta autorizada”.
-
-## Testes
-
-```bash
-python3 -m pytest -q
-```
-
-Os testes usam um provedor falso e nunca chamam a API. Para adicionar outro provedor, implemente `AIProvider` em `app/providers/` e troque apenas sua construção em `app/main.py`.
-
-### Web e PWA
-
-Inicie a API local:
-
-```bash
 python3 -m uvicorn app.server:app --reload
 ```
 
-Abra `http://localhost:8000`. No celular, use **Adicionar à tela inicial** no menu do navegador. Em produção, informe o mesmo valor de `APP_ACCESS_TOKEN` nas configurações da PWA.
+Nunca versione `.env`.
 
-Endpoints principais:
+### Testes
 
-- `GET /api/health`: saúde e configuração dos canais;
-- `POST /api/chat`: conversa autenticada;
-- `DELETE /api/sessions/{id}`: inicia uma nova conversa;
-- `GET|POST /api/whatsapp/webhook`: verificação e recebimento da Meta.
-
-### WhatsApp Cloud API
-
-Configure também, somente no ambiente da hospedagem:
-
-```env
-WHATSAPP_VERIFY_TOKEN=um_valor_criado_por_voce
-WHATSAPP_ACCESS_TOKEN=token_fornecido_pela_meta
-WHATSAPP_PHONE_NUMBER_ID=id_do_numero_na_meta
-WHATSAPP_APP_SECRET=segredo_do_aplicativo_meta
-WHATSAPP_GRAPH_VERSION=v23.0
+```bash
+python3 -m pytest -q
+python3 -m compileall -q app
+node --check public/app.js
 ```
 
-No painel da Meta, configure a URL de callback como:
+---
+
+## 8. Variáveis de ambiente
+
+### IA
+
+```env
+GEMINI_API_KEY=
+MODEL_NAME=
+FALLBACK_MODEL_NAME=
+```
+
+### WhatsApp Meta
+
+```env
+WHATSAPP_VERIFY_TOKEN=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_APP_SECRET=
+WHATSAPP_GRAPH_VERSION=
+```
+
+### Pão Nosso
+
+```env
+PAONOSSO_SUPABASE_URL=
+PAONOSSO_SUPABASE_KEY=
+```
+
+Pode haver variáveis adicionais do ledger/auditoria conforme a versão.
+
+Valores reais ficam somente nos providers/ambiente seguro.
+
+---
+
+## 9. Webhook WhatsApp
+
+Callback atual do backend:
 
 ```text
-https://SEU-DOMINIO/api/whatsapp/webhook
+https://meu-primeiro-agente-indol.vercel.app/api/whatsapp/webhook
 ```
 
-Use em **Verify token** exatamente o valor de `WHATSAPP_VERIFY_TOKEN` e assine o campo `messages`. A versão da Graph API é configurável para facilitar atualizações.
+Requisitos:
 
-### Vercel
+- verify token correto;
+- assinatura `X-Hub-Signature-256`;
+- app secret configurado;
+- message IDs deduplicados;
+- outbound via Graph API.
 
-O projeto usa o runtime Python/FastAPI da Vercel. Depois de vincular o projeto, configure os segredos em Production e publique:
+---
 
-```bash
-vercel link
-vercel env add GEMINI_API_KEY production
-vercel env add APP_ACCESS_TOKEN production
-vercel --prod
+## 10. Deploy
+
+### Backend
+
+Hospedado na Vercel.
+
+Antes de publicar:
+
+1. conferir branch/SHA;
+2. conferir CI;
+3. conferir variáveis;
+4. definir rollback;
+5. não expor segredos.
+
+Depois:
+
+1. validar `/api/health`;
+2. validar webhook;
+3. validar tool call;
+4. validar pedido;
+5. registrar evidência.
+
+### Banco
+
+Toda mudança estrutural deve existir como migration versionada em `supabase/migrations/`.
+
+Fluxo:
+
+```text
+migration
+→ revisão
+→ aplicação autorizada
+→ verificar migration live
+→ smoke
+→ checkpoint
 ```
 
-Adicione as quatro variáveis `WHATSAPP_*` antes de ativar o webhook. A pasta `.vercel/`, o arquivo `.env` e `.env.local` são ignorados pelo Git.
+### Storefront
 
-## Consultar o computador pela nuvem
+Está em Vercel em `paonosso-v3.vercel.app`, mas seu pipeline só será considerado reproduzível após a reconciliação do código-fonte na V4.0.
 
-A aplicação nunca abre uma porta do roteador. Uma ponte local autenticada executa somente as quatro ferramentas da lista fechada, e o Tailscale Funnel encaminha HTTPS até ela por um hostname fixo.
+---
 
-No `.env` do computador, configure uma pasta e um token aleatório longo:
+## 11. Segurança
 
-```env
-ALLOWED_DIRECTORY=/caminho/absoluto/permitido
-BRIDGE_DEVICE_TOKEN=um_token_longo_e_exclusivo
+O agente Pão Nosso:
+
+**Pode**
+- consultar catálogo;
+- criar pedido;
+- consultar pedido usando o telefone da conversa;
+- futuramente executar ações adicionais apenas por ferramentas explícitas.
+
+**Não pode**
+- acessar ferramentas executivas do AEP;
+- ler arquivos locais;
+- consultar pedido de outro telefone;
+- inventar preço, total, status ou código;
+- tratar texto de chat como confirmação de pagamento.
+
+Merge em Git não significa deploy em produção.
+
+---
+
+## 12. Acompanhamento da evolução
+
+### Roadmap
+
+[ROADMAP.md](ROADMAP.md)
+
+### Checklist
+
+[CHECKLIST.md](CHECKLIST.md)
+
+Regra:
+
+> Uma caixa só vira `[x]` após implementação + teste + smoke + evidência.
+
+Issues:
+
+- #19 — missão de produto;
+- #20 — V4.0 Fundação;
+- #21 — V4.1 Painel;
+- #22 — V4.2 WhatsApp/status;
+- #23 — V4.3 Clientes;
+- #24 — V4.4 Cardápio;
+- #25 — V4.5 Produção;
+- #26 — V4.6 Estoque;
+- #27 — V4.7 Pix;
+- #28 — V4.8 Entrega;
+- #29 — V4.9 Analytics;
+- #30 — V4.10 Agente/hardening.
+
+---
+
+## 13. Missão MCF
+
+```text
+MCF-PAO-NOSSO-V4-001
 ```
 
-Inicie a ponte:
+Registro MCF: `multiagent-collaboration-framework#375`.
 
-```bash
-python3 -m app.bridge
-```
+A missão usa:
 
-Depois de autenticar o Tailscale local, publique a ponte pelo Funnel:
+- MESTRE — coordenação;
+- Sofia — arquitetura;
+- Eduardo — backend;
+- Manoel — PostgreSQL/Supabase;
+- Beatriz — comportamento do agente;
+- Ricardo — segurança;
+- Júlia — governança/dados;
+- Renato — validação;
+- Augusto — trace;
+- Carmem — documentação;
+- Miriam — continuidade;
+- Emily — auditoria;
+- Gabriel — Git/integração;
+- LÉO — gate.
 
-```bash
-.tools/tailscale/tailscale --socket="$PWD/.runtime/tailscaled.sock" funnel --bg --yes 8787
-```
+---
 
-Cadastre na Vercel e faça redeploy:
+## 14. Retomada por outro agente
 
-```env
-BRIDGE_URL=https://nome-do-computador.sua-rede.ts.net
-BRIDGE_DEVICE_TOKEN=o_mesmo_token_do_computador
-```
+Leia, nesta ordem:
 
-Quando `BRIDGE_URL` não está configurada, a versão na Vercel não oferece ferramentas de sistema e nunca confunde o disco da nuvem com o computador. Consulte o guia detalhado em `docs/SETUP_AND_DEPLOYMENT.md`.
+1. `README.md`;
+2. `CHECKLIST.md`;
+3. `ROADMAP.md`;
+4. `.mcf/project-capsule.yaml`;
+5. `.mcf/mission.yaml`;
+6. issue da fase atual;
+7. provider/GitHub live.
 
-### Inicialização automática no Linux
-
-Os arquivos em `systemd/` iniciam a ponte e o Tailscale no login, sem depender do VS Code ou de um terminal aberto. O Tailscale Funnel fornece um hostname HTTPS fixo em `*.ts.net`; cadastre esse endereço como `BRIDGE_URL` na Vercel.
-
-```bash
-systemctl --user status hello-agent-bridge.service
-systemctl --user status hello-agent-tailscaled.service
-journalctl --user -u hello-agent-tailscaled.service -f
-```
-
-O serviço usa o modo de rede em espaço do usuário e não exige instalação administrativa. O estado de autenticação fica somente em `.tools/tailscale-state/`, que é ignorado pelo Git.
-
-
-## Pão Nosso no WhatsApp
-
-O canal WhatsApp reutiliza a mesma integração Meta/WhatsApp Cloud API já existente, mas o webhook agora roteia as mensagens para um assistente dedicado da **Pão Nosso**. O endpoint `/api/chat` continua sendo o AEP web; apenas o canal WhatsApp usa o contexto e as ferramentas da padaria.
-
-Variáveis adicionais na Vercel:
-
-```env
-PAONOSSO_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-PAONOSSO_SUPABASE_KEY=sb_publishable_...
-```
-
-O assistente WhatsApp possui somente três capacidades de negócio:
-
-- consultar catálogo, preços e disponibilidade no Supabase;
-- criar pedido real no PostgreSQL e devolver código `PN-XXXX`;
-- consultar status de um pedido usando o código PN e o telefone remetente do próprio WhatsApp.
-
-Ele não recebe as ferramentas executivas do AEP, não lê arquivos locais e não pode consultar pedidos de outro telefone.
+Nunca use um status histórico como prova de produção atual.
